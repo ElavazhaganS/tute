@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AS TUITIONS - Student Management System</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- External CSS stylesheet -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container header-content">
+            <div class="logo" onclick="showPage('home')">
+                <i class="fas fa-graduation-cap"></i>
+                <span>AS TUITIONS</span>
+            </div>
+            <div class="nav-controls">
+                <button class="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark/Light Mode">
+                    <i class="fas fa-moon" id="dark-icon"></i>
+                </button>
+                <div class="nav-links">
+                    <button class="nav-btn active" id="nav-home" onclick="showPage('home')">
+                        <i class="fas fa-home"></i> <span>Home</span>
+                    </button>
+                    <!-- Displayed only when logged out -->
+                    <button class="nav-btn" id="nav-login-staff" onclick="showPage('staff-login')">
+                        <i class="fas fa-chalkboard-user"></i> <span>Staff Login</span>
+                    </button>
+                    <button class="nav-btn" id="nav-login-student" onclick="showPage('student-login')">
+                        <i class="fas fa-user-graduate"></i> <span>Student Login</span>
+                    </button>
+                    
+                    <!-- Displayed dynamically when logged in -->
+                    <div id="nav-user-info" style="display: none;">
+                        <span class="user-badge" id="nav-user-badge">
+                            <i class="fas fa-user-circle"></i> Staff Member
+                        </span>
+                    </div>
+                    <button class="nav-btn" id="nav-logout" onclick="logout()" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Pages -->
+    <main class="container flex-grow">
+
+        <!-- 1. Home Page -->
+        <section class="page active" id="home">
+            <div class="hero">
+                <h1><i class="fas fa-school"></i> Welcome to SchoolHub</h1>
+                <p>A cutting-edge tuitions run by teachers, parents, and students to coordinate academic success.</p>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="showPage('staff-login')">
+                        <i class="fas fa-chalkboard-user"></i> Staff Login Panel
+                    </button>
+                    <button class="btn btn-secondary" onclick="showPage('student-login')">
+                        <i class="fas fa-user-graduate"></i> Student Login Panel
+                    </button>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature-card glass">
+                    <i class="fas fa-id-card-clip"></i>
+                    <h3>Student Administration</h3>
+                    <p>Keep track of active enrollments, details, standard streams, and personal details in real-time.</p>
+                </div>
+                <div class="feature-card glass">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>Attendance Tracking</h3>
+                    <p>Mark student attendance daily with an interactive interface. Auto-compute statistics instantly.</p>
+                </div>
+                <div class="feature-card glass">
+                    <i class="fas fa-chart-line-up"></i>
+                    <h3>Performance & Marks</h3>
+                    <p>Manage test scores, display subject-wise percentage bars, and generate dynamic rankings.</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 2. Staff Login Page -->
+        <section class="page" id="staff-login">
+            <div class="login-container">
+                <div class="login-card glass">
+                    <h2><i class="fas fa-chalkboard-user"></i> Staff Login</h2>
+                    <form onsubmit="handleStaffLogin(event)">
+                        <div class="form-group">
+                            <label for="staff-user">Username</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="staff-user" placeholder="Enter username (e.g. admin)" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="staff-pass">Password</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="staff-pass" placeholder="Enter password (e.g. admin)" required>
+                            </div>
+                            <div class="error-message" id="staff-error">
+                                <i class="fas fa-circle-exclamation"></i> Invalid credentials.
+                            </div>
+                        </div>
+                        <div class="forgot-password">
+                            <a href="#" onclick="alert('Password reset link has been dispatched to your administrator email.')">Forgot Password?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                            <i class="fas fa-sign-in-alt"></i> Access Dashboard
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Student Login Page -->
+        <section class="page" id="student-login">
+            <div class="login-container">
+                <div class="login-card glass">
+                    <h2><i class="fas fa-user-graduate"></i> Student Login</h2>
+                    <form onsubmit="handleStudentLogin(event)">
+                        <div class="form-group">
+                            <label for="student-roll">Roll Number</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-id-badge"></i>
+                                <input type="text" id="student-roll" placeholder="Enter roll number (e.g. 1001)" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="student-pass">Password</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="student-pass" placeholder="Enter password (any value)" required>
+                            </div>
+                            <div class="error-message" id="student-error">
+                                <i class="fas fa-circle-exclamation"></i> Roll number not found in directory.
+                            </div>
+                        </div>
+                        <div class="forgot-password">
+                            <a href="#" onclick="alert('Please contact the school office to retrieve/reset your password.')">Need Help?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                            <i class="fas fa-sign-in-alt"></i> Access Portal
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Staff Dashboard Page -->
+        <section class="page" id="staff-dashboard">
+            <!-- Dashboard Stats Summary Panel -->
+            <div style="margin-bottom: 2rem;">
+                <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 1.5rem; color: var(--text-main); display: flex; align-items: center; gap: 0.8rem;">
+                    <i class="fas fa-gauge-high" style="color: var(--primary);"></i> Staff Overview
+                </h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-info">
+                            <h4>Total Students</h4>
+                            <div class="stat-value" id="stat-total-students">0</div>
+                            <small>Registered enrollments</small>
+                        </div>
+                        <i class="fas fa-users-viewfinder stat-icon"></i>
+                    </div>
+                    <div class="stat-card success glass">
+                        <div class="stat-info">
+                            <h4>Attendance Rate</h4>
+                            <div class="stat-value" id="stat-attendance-rate">0%</div>
+                            <small>Overall average</small>
+                        </div>
+                        <i class="fas fa-chart-line stat-icon"></i>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Inner Layout -->
+            <div class="dashboard-container">
+                <!-- Sidebar Menu Navigation -->
+                <div class="sidebar glass">
+                    <div class="sidebar-header">
+                        <h3><i class="fas fa-server"></i> System Menu</h3>
+                    </div>
+                    <ul class="sidebar-menu">
+                        <li><button onclick="switchStaffTab('standards')" id="tab-standards" class="active"><i class="fas fa-layer-group"></i> Standards</button></li>
+                        <li><button onclick="switchStaffTab('students')" id="tab-students"><i class="fas fa-users"></i> Students</button></li>
+                        <li><button onclick="switchStaffTab('attendance')" id="tab-attendance"><i class="fas fa-calendar-days"></i> Attendance</button></li>
+                        <li><button onclick="switchStaffTab('marks')" id="tab-marks"><i class="fas fa-book-bookmark"></i> Test Marks</button></li>
+                        <li><button onclick="switchStaffTab('performance')" id="tab-performance"><i class="fas fa-chart-pie"></i> Performance</button></li>
+                        <li><button onclick="switchStaffTab('ranks')" id="tab-ranks"><i class="fas fa-trophy"></i> Ranks</button></li>
+                        <li><button onclick="switchStaffTab('fees')" id="tab-fees"><i class="fas fa-indian-rupee-sign"></i> Fees Management</button></li>
+                        <li><button onclick="switchStaffTab('exams')" id="tab-exams"><i class="fas fa-file-pen"></i> Exam Schedule</button></li>
+                        <li><button onclick="switchStaffTab('timetable')" id="tab-timetable"><i class="fas fa-table-cells"></i> Timetable</button></li>
+                        <li><button onclick="switchStaffTab('reviews')" id="tab-reviews"><i class="fas fa-star-half-stroke"></i> Student Reviews</button></li>
+                    </ul>
+                </div>
+
+                <!-- Main Content Panel -->
+                <div class="dashboard-main">
+                    
+                    <!-- 5. Standards Module -->
+                    <div id="sec-standards" class="dashboard-section active">
+                        <div class="section-header">
+                            <h3><i class="fas fa-layer-group"></i> Standards Registry</h3>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Select a standard level below to view, manage, and filter corresponding students.</p>
+                        <div class="standards-grid" id="standards-container">
+                            <!-- Injected dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- 6. Student Management Module -->
+                    <div id="sec-students" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-users"></i> Student Directory</h3>
+                            <button class="btn btn-primary" id="btn-add-student" onclick="openAddStudentModal()">
+                                <i class="fas fa-plus"></i> Add Student
+                            </button>
+                        </div>
+                        
+                        <div class="search-control-bar" style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;">
+                            <div class="search-input-wrapper" style="flex: 1; min-width: 260px;">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="student-search-query" oninput="renderStudentsTable()" placeholder="Search by name, roll no, student ID, parent phone...">
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-standard">Standard:</label>
+                                <select id="student-filter-standard" onchange="renderStudentsTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                    <option value="All">All Standards</option>
+                                    <!-- Options injected dynamically by JS -->
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-section">Section:</label>
+                                <select id="student-filter-section" onchange="renderStudentsTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                    <option value="All">All Sections</option>
+                                    <option value="A">Section A</option>
+                                    <option value="B">Section B</option>
+                                    <option value="C">Section C</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-fees">Fees:</label>
+                                <select id="student-filter-fees" onchange="renderStudentsTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                    <option value="All">All Statuses</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Partially Paid">Partially Paid</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="students-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student & ID</th>
+                                        <th>Roll Number</th>
+                                        <th>Standard</th>
+                                        <th>Section</th>
+                                        <th>Stream/Group</th>
+                                        <th>Parent Contact</th>
+                                        <th>Fees Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 7. Attendance Management Module -->
+                    <div id="sec-attendance" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-calendar-days"></i> Attendance Manager</h3>
+                        </div>
+
+                        <div class="attendance-calendar-bar">
+                            <div class="date-picker-container">
+                                <label for="attendance-date-select">Select Date:</label>
+                                <input type="date" id="attendance-date-select" onchange="loadAttendanceForSelectedDate()">
+                            </div>
+                            <div style="display: none; gap: 0.8rem; align-items: center;">
+                                <label for="attendance-standard-select" style="font-weight: 700;">Standard:</label>
+                                <select id="attendance-standard-select" onchange="loadAttendanceForSelectedDate()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                    <!-- Injected dynamically -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Statistics specific to selected date -->
+                        <div class="stats-grid" style="margin-bottom: 1.5rem; grid-template-columns: repeat(3, 1fr);">
+                            <div class="stat-card glass" style="padding: 1.2rem; border-left-width: 4px;">
+                                <div class="stat-info">
+                                    <h4>Present on Date</h4>
+                                    <div class="stat-value" id="attendance-date-present" style="font-size: 1.6rem;">0</div>
+                                </div>
+                                <i class="fas fa-user-check stat-icon" style="font-size: 1.6rem;"></i>
+                            </div>
+                            <div class="stat-card danger glass" style="padding: 1.2rem; border-left-width: 4px;">
+                                <div class="stat-info">
+                                    <h4>Absent on Date</h4>
+                                    <div class="stat-value" id="attendance-date-absent" style="font-size: 1.6rem;">0</div>
+                                </div>
+                                <i class="fas fa-user-xmark stat-icon" style="font-size: 1.6rem;"></i>
+                            </div>
+                            <div class="stat-card success glass" style="padding: 1.2rem; border-left-width: 4px;">
+                                <div class="stat-info">
+                                    <h4>Rate on Date</h4>
+                                    <div class="stat-value" id="attendance-date-rate" style="font-size: 1.6rem;">0%</div>
+                                </div>
+                                <i class="fas fa-percent stat-icon" style="font-size: 1.6rem;"></i>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="attendance-marking-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll Number</th>
+                                        <th>Name</th>
+                                        <th>Standard</th>
+                                        <th>Status (Toggle to update)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic marking rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 8. Marks Management Module -->
+                    <div id="sec-marks" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-book-bookmark"></i> Test Marks Management</h3>
+                            <button class="btn btn-success" onclick="saveActiveMarks()">
+                                <i class="fas fa-floppy-disk"></i> Save All Marks
+                            </button>
+                        </div>
+
+                        <div class="attendance-calendar-bar">
+                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <label style="font-weight: 700;" for="marks-test-type">Test Type:</label>
+                                    <select id="marks-test-type" onchange="loadMarksTable()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                        <option value="weekly">Weekly Test</option>
+                                        <option value="monthly">Monthly Test</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <label style="font-weight: 700;" for="marks-standard-select">Standard:</label>
+                                    <select id="marks-standard-select" onchange="loadMarksTable()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                        <!-- Injected dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="font-weight: 700; color: var(--text-muted);">
+                                Class Average: <span id="marks-class-average" style="color: var(--primary); font-size: 1.1rem; font-weight: 800;">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="marks-input-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll Number</th>
+                                        <th>Name</th>
+                                        <th>English (100)</th>
+                                        <th>Mathematics (100)</th>
+                                        <th>Science (100)</th>
+                                        <th>History (100)</th>
+                                        <th>Total (400)</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Inputs will generate here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 9. Performance Analysis Module -->
+                    <div id="sec-performance" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-chart-pie"></i> Performance Analysis</h3>
+                        </div>
+
+                        <div class="performance-analysis-grid">
+                            <div class="perf-card excellent glass" onclick="filterPerformance('excellent')" id="perf-btn-excellent">
+                                <i class="fas fa-crown"></i>
+                                <h4>Excellent Score</h4>
+                                <div class="perf-count" id="perf-cnt-excellent">0</div>
+                                <small>Avg Marks &gt; 90%</small>
+                            </div>
+                            <div class="perf-card improved glass" onclick="filterPerformance('improved')" id="perf-btn-improved">
+                                <i class="fas fa-arrow-trend-up"></i>
+                                <h4>Improved Performance</h4>
+                                <div class="perf-count" id="perf-cnt-improved">0</div>
+                                <small>Monthly &gt; Weekly Marks</small>
+                            </div>
+                            <div class="perf-card good glass" onclick="filterPerformance('good')" id="perf-btn-good">
+                                <i class="fas fa-circle-check"></i>
+                                <h4>Good Progress</h4>
+                                <div class="perf-count" id="perf-cnt-good">0</div>
+                                <small>Avg Marks 75% - 90%</small>
+                            </div>
+                            <div class="perf-card warning glass" onclick="filterPerformance('warning')" id="perf-btn-warning">
+                                <i class="fas fa-circle-exclamation"></i>
+                                <h4>Needs Improvement</h4>
+                                <div class="perf-count" id="perf-cnt-warning">0</div>
+                                <small>Avg Marks &lt; 50%</small>
+                            </div>
+                            <div class="perf-card decreased glass" onclick="filterPerformance('decreased')" id="perf-btn-decreased">
+                                <i class="fas fa-arrow-trend-down"></i>
+                                <h4>Performance Decreased</h4>
+                                <div class="perf-count" id="perf-cnt-decreased">0</div>
+                                <small>Monthly &lt; Weekly Marks</small>
+                            </div>
+                        </div>
+
+                        <div class="section-header">
+                            <h4 id="performance-table-heading" style="font-weight: 800; font-size: 1.1rem; color: var(--primary);">Filtered Students List</h4>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table id="performance-students-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll Number</th>
+                                        <th>Name</th>
+                                        <th>Standard</th>
+                                        <th>Weekly Average</th>
+                                        <th>Monthly Average</th>
+                                        <th>Difference</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected based on filter selection -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 10. Rank Management Module -->
+                    <div id="sec-ranks" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-trophy"></i> Rank Management</h3>
+                        </div>
+
+                        <div class="attendance-calendar-bar" style="margin-bottom: 2rem;">
+                            <div style="display: flex; gap: 0.8rem; align-items: center;">
+                                <label for="ranks-standard-select" style="font-weight: 700;">Standard Select:</label>
+                                <select id="ranks-standard-select" onchange="loadRanksDashboard()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                    <!-- Injected -->
+                                </select>
+                            </div>
+                            <div style="font-weight: 700; color: var(--text-muted);">
+                                Top Performer: <span id="ranks-top-scorer" style="color: var(--warning); font-size: 1.1rem; font-weight: 800;">N/A</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="ranks-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Name</th>
+                                        <th>Roll Number</th>
+                                        <th>Mathematics</th>
+                                        <th>Science</th>
+                                        <th>Average Score</th>
+                                        <th>Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Ranks rows sorted descending -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+                    <!-- 11. Fees Management Module -->
+                    <div id="sec-fees" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-indian-rupee-sign"></i> Fees Management</h3>
+                        </div>
+
+                        <!-- Fee Filters -->
+                        <div class="attendance-calendar-bar" style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+                                <div class="search-input-wrapper" style="flex: 1; min-width: 220px;">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="fees-search-query" oninput="renderFeesTable()" placeholder="Search by student name or roll number...">
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-status">Status:</label>
+                                    <select id="fees-filter-status" onchange="renderFeesTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                        <option value="All">All Statuses</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Partially Paid">Partially Paid</option>
+                                        <option value="Pending">Pending</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-standard">Standard:</label>
+                                    <select id="fees-filter-standard" onchange="renderFeesTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                        <option value="All">All Standards</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Fee Summary Stats -->
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.2rem;">
+                                <div class="stat-card success glass" style="padding: 1.2rem;">
+                                    <div class="stat-info"><h4>Fees Paid</h4><div class="stat-value" id="fees-stat-paid">0</div></div>
+                                    <i class="fas fa-circle-check stat-icon" style="font-size: 1.6rem;"></i>
+                                </div>
+                                <div class="stat-card warning glass" style="padding: 1.2rem;">
+                                    <div class="stat-info"><h4>Partially Paid</h4><div class="stat-value" id="fees-stat-partial">0</div></div>
+                                    <i class="fas fa-circle-half-stroke stat-icon" style="font-size: 1.6rem;"></i>
+                                </div>
+                                <div class="stat-card danger glass" style="padding: 1.2rem;">
+                                    <div class="stat-info"><h4>Fees Pending</h4><div class="stat-value" id="fees-stat-pending">0</div></div>
+                                    <i class="fas fa-circle-xmark stat-icon" style="font-size: 1.6rem;"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="fees-management-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Roll No</th>
+                                        <th>Standard</th>
+                                        <th>Total Fee (₹)</th>
+                                        <th>Amount Paid (₹)</th>
+                                        <th>Balance (₹)</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- FEES EDIT MODAL (inline) -->
+                    <div class="modal" id="fees-edit-modal">
+                        <div class="modal-content" style="max-width: 520px;">
+                            <div class="modal-header">
+                                <h3><i class="fas fa-indian-rupee-sign"></i> Update Fees — <span id="fees-modal-student-name">Student</span></h3>
+                                <button class="modal-close-btn" onclick="closeFeesModal()">&times;</button>
+                            </div>
+                            <form onsubmit="handleFeesFormSubmit(event)">
+                                <input type="hidden" id="fees-modal-roll">
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label for="fees-modal-status">Fees Status</label>
+                                        <select id="fees-modal-status" style="padding-left: 1rem; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                            <option value="Paid">Paid</option>
+                                            <option value="Partially Paid">Partially Paid</option>
+                                            <option value="Pending">Pending</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label for="fees-modal-total">Total Fee Amount (₹)</label>
+                                            <input type="number" id="fees-modal-total" min="0" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="fees-modal-paid">Amount Paid (₹)</label>
+                                            <input type="number" id="fees-modal-paid" min="0" style="padding-left: 1rem;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="closeFeesModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-success" id="fees-modal-save-btn">
+                                        <i class="fas fa-floppy-disk"></i> Save Fees
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 12. Exam Schedule Management Module -->
+                    <div id="sec-exams" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-file-pen"></i> Exam Schedule Manager</h3>
+                            <button class="btn btn-primary" onclick="openAddExamModal()">
+                                <i class="fas fa-plus"></i> Add Exam
+                            </button>
+                        </div>
+
+                        <div class="attendance-calendar-bar" style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; gap: 0.8rem; align-items: center;">
+                                <label style="font-weight: 700;" for="exams-filter-standard">Filter by Standard:</label>
+                                <select id="exams-filter-standard" onchange="renderExamsTable()" style="padding: 0.5rem; border: 1px solid var(--border-card); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                    <option value="All">All Standards</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="exams-management-table">
+                                <thead>
+                                    <tr>
+                                        <th>Exam Name</th>
+                                        <th>Standard</th>
+                                        <th>Subject</th>
+                                        <th>Date</th>
+                                        <th>Start Time</th>
+                                        <th>Duration</th>
+                                        <th>Max Marks</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ADD EXAM MODAL -->
+                    <div class="modal" id="exam-add-modal">
+                        <div class="modal-content" style="max-width: 580px;">
+                            <div class="modal-header">
+                                <h3><i class="fas fa-file-pen"></i> Add Exam Schedule</h3>
+                                <button class="modal-close-btn" onclick="closeAddExamModal()">&times;</button>
+                            </div>
+                            <form onsubmit="handleExamFormSubmit(event)">
+                                <div class="modal-body">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group" style="grid-column: 1 / -1;">
+                                            <label for="exam-modal-name">Exam / Test Name *</label>
+                                            <input type="text" id="exam-modal-name" required placeholder="e.g. First Term Examination" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-standard">Standard *</label>
+                                            <select id="exam-modal-standard" required style="padding-left: 1rem; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                                <!-- Injected dynamically -->
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-subject">Subject *</label>
+                                            <input type="text" id="exam-modal-subject" required placeholder="e.g. Mathematics" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-date">Exam Date *</label>
+                                            <input type="date" id="exam-modal-date" required style="padding: 0.5rem 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-time">Start Time</label>
+                                            <input type="text" id="exam-modal-time" placeholder="e.g. 09:30 AM" value="09:30 AM" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-duration">Duration (minutes)</label>
+                                            <input type="number" id="exam-modal-duration" value="90" min="10" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="exam-modal-maxmarks">Max Marks</label>
+                                            <input type="number" id="exam-modal-maxmarks" value="100" min="1" style="padding-left: 1rem;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="closeAddExamModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" id="exam-modal-save-btn">
+                                        <i class="fas fa-floppy-disk"></i> Save Exam
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 12. Timetable Management Module -->
+                    <div id="sec-timetable" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-table-cells"></i> Timetable Editor</h3>
+                            <div style="display: flex; gap: 0.6rem;">
+                                <button class="btn btn-secondary" onclick="openImportTimetableModal()">
+                                    <i class="fas fa-cloud-upload-alt"></i> Import JSON
+                                </button>
+                                <button class="btn btn-primary" id="timetable-toggle-edit-btn" onclick="toggleTimetableEditing()">
+                                    <i class="fas fa-edit"></i> Edit Timetable
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="attendance-calendar-bar">
+                            <div style="display: flex; gap: 0.8rem; align-items: center;">
+                                <label for="timetable-standard-select" style="font-weight: 700;">Standard Select:</label>
+                                <select id="timetable-standard-select" onchange="renderTimetableGrid()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                    <!-- Injected -->
+                                </select>
+                            </div>
+                            <div id="timetable-edit-status" style="font-weight: 700; font-size: 0.9rem; color: var(--success); display: none;">
+                                <i class="fas fa-circle-dot"></i> Live Editing Active
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="timetable-editor-grid">
+                                <thead>
+                                    <tr>
+                                        <th>Timing Period</th>
+                                        <th>Monday</th>
+                                        <th>Tuesday</th>
+                                        <th>Wednesday</th>
+                                        <th>Thursday</th>
+                                        <th>Friday</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Calendar periods -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Student Reviews Module -->
+                    <div id="sec-reviews" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-star-half-stroke"></i> Student Reviews Registry</h3>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Submit and view academic, behavioral, and overall performance reviews for students.</p>
+
+                        <div class="attendance-calendar-bar" style="margin-bottom: 2rem;">
+                            <div style="display: flex; gap: 0.8rem; align-items: center; flex: 1; min-width: 250px;">
+                                <label for="reviews-student-select" style="font-weight: 700;">Select Student:</label>
+                                <select id="reviews-student-select" onchange="loadStudentReviewsInStaff()" style="padding: 0.5rem; border: 1px solid var(--border-card); flex: 1; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                    <!-- Options populated dynamically with all students in alphabetical order -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; flex-wrap: wrap;">
+                            <!-- Existing Reviews List -->
+                            <div class="glass" style="padding: 1.8rem;">
+                                <h4 style="font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
+                                    <i class="fas fa-comments"></i> Existing Reviews for <span id="reviews-student-name-display" style="text-decoration: underline;">Student</span>
+                                </h4>
+                                <div id="reviews-summary-block" style="display: none; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                    <span style="font-weight: 800; font-size: 1.5rem;" id="reviews-average-rating-num">0.0</span>
+                                    <div class="stars-container" id="reviews-average-stars"></div>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);" id="reviews-total-count">(0 reviews)</span>
+                                </div>
+                                <div id="reviews-list-container" style="max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Add New Review Form -->
+                            <div class="glass" style="padding: 1.8rem;">
+                                <h4 style="font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--success);">
+                                    <i class="fas fa-pen-to-square"></i> Submit a New Review
+                                </h4>
+                                <form onsubmit="handleReviewFormSubmit(event)">
+                                    <div class="form-group">
+                                        <label for="review-input-reviewer">Reviewer Name</label>
+                                        <input type="text" id="review-input-reviewer" value="Administrator" required style="padding-left: 1rem;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="review-input-category">Evaluation Category</label>
+                                        <select id="review-input-category" style="padding-left: 1rem; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                            <option value="Academic">Academic Performance</option>
+                                            <option value="Behavior">Behavioral & Discipline</option>
+                                            <option value="Extracurricular">Extracurricular Activities</option>
+                                            <option value="Overall">Overall Recommendation</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rating Score</label>
+                                        <div class="interactive-stars" id="review-interactive-stars">
+                                            <i class="fa-solid fa-star" data-value="1" onclick="setReviewRating(1)"></i>
+                                            <i class="fa-solid fa-star" data-value="2" onclick="setReviewRating(2)"></i>
+                                            <i class="fa-solid fa-star" data-value="3" onclick="setReviewRating(3)"></i>
+                                            <i class="fa-solid fa-star" data-value="4" onclick="setReviewRating(4)"></i>
+                                            <i class="fa-solid fa-star" data-value="5" onclick="setReviewRating(5)"></i>
+                                        </div>
+                                        <input type="hidden" id="review-input-rating" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="review-input-comment">Detailed Feedback / Review Notes</label>
+                                        <textarea id="review-input-comment" rows="4" placeholder="Describe the student's accomplishments, behavior, or areas of improvement..." required style="padding-left: 1rem; width: 100%; border: 1px solid var(--border-input); border-radius: var(--radius-sm);"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center;">
+                                        <i class="fas fa-paper-plane"></i> Publish Review
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 13. Student Personal Portal Page -->
+        <section class="page" id="student-dashboard">
+            <div style="margin-bottom: 2rem;">
+                <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 1.5rem; color: var(--text-main); display: flex; align-items: center; gap: 0.8rem;">
+                    <i class="fas fa-user-graduate" style="color: var(--primary);"></i> Student Portal
+                </h2>
+                
+                <!-- Personalized Key Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-info">
+                            <h4>My Attendance</h4>
+                            <div class="stat-value" id="stud-card-attendance">0%</div>
+                            <small>Aggregated logs</small>
+                        </div>
+                        <i class="fas fa-user-clock stat-icon"></i>
+                    </div>
+                    <div class="stat-card success glass">
+                        <div class="stat-info">
+                            <h4>My Average Marks</h4>
+                            <div class="stat-value" id="stud-card-average">0%</div>
+                            <small>Active term evaluations</small>
+                        </div>
+                        <i class="fas fa-graduation-cap stat-icon"></i>
+                    </div>
+                    <div class="stat-card warning glass">
+                        <div class="stat-info">
+                            <h4>Class Rank</h4>
+                            <div class="stat-value" id="stud-card-rank">N/A</div>
+                            <small>Based on performance</small>
+                        </div>
+                        <i class="fas fa-medal stat-icon"></i>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Portal Inner Layout -->
+            <div class="dashboard-container">
+                <!-- Sidebar -->
+                <div class="sidebar glass">
+                    <div class="sidebar-header">
+                        <h3><i class="fas fa-user-circle"></i> My Portal</h3>
+                    </div>
+                    <ul class="sidebar-menu">
+                        <li><button onclick="switchStudentTab('overview')" id="tab-stud-overview" class="active"><i class="fas fa-chart-pie"></i> Overview</button></li>
+                        <li><button onclick="switchStudentTab('attendance')" id="tab-stud-attendance"><i class="fas fa-clipboard-user"></i> Attendance Logs</button></li>
+                        <li><button onclick="switchStudentTab('marks')" id="tab-stud-marks"><i class="fas fa-list-check"></i> Marks Card</button></li>
+                        <li><button onclick="switchStudentTab('fees')" id="tab-stud-fees"><i class="fas fa-indian-rupee-sign"></i> Fees Status</button></li>
+                        <li><button onclick="switchStudentTab('exams')" id="tab-stud-exams"><i class="fas fa-file-pen"></i> Exam Schedule</button></li>
+                        <li><button onclick="switchStudentTab('timetable')" id="tab-stud-timetable"><i class="fas fa-calendar-day"></i> Weekly Timetable</button></li>
+                        <li><button onclick="switchStudentTab('profile')" id="tab-stud-profile"><i class="fas fa-circle-info"></i> Personal Profile</button></li>
+                        <li><button onclick="switchStudentTab('reviews')" id="tab-stud-reviews"><i class="fas fa-star-half-stroke"></i> My Reviews</button></li>
+                    </ul>
+                </div>
+
+                <!-- Main Portal Display -->
+                <div class="dashboard-main">
+                    
+                    <!-- Overview Dashboard Tab -->
+                    <div id="sec-stud-overview" class="dashboard-section active">
+                        <div class="section-header">
+                            <h3><i class="fas fa-chart-pie"></i> Welcome, <span id="stud-welcome-name">Student</span>!</h3>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem; flex-wrap: wrap;">
+                            <!-- Performance chart wrapper -->
+                            <div class="glass" style="padding: 2rem;">
+                                <h4 style="font-weight: 800; margin-bottom: 1.5rem;"><i class="fas fa-chart-column" style="color: var(--primary);"></i> Subject-Wise Progress</h4>
+                                <div id="student-subject-progress-bars">
+                                    <!-- Injected bars -->
+                                </div>
+                            </div>
+                            
+                            <!-- Comments & Notes -->
+                            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                <div class="glass" style="padding: 1.8rem; border-left: 4px solid var(--success);">
+                                    <h4 style="font-weight: 800; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-comment-dots" style="color: var(--success);"></i> Teacher's Remarks
+                                    </h4>
+                                    <p id="student-comments-area" style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; font-style: italic;">
+                                        "No remarks entered yet."
+                                    </p>
+                                </div>
+                                <div class="glass" style="padding: 1.8rem; border-left: 4px solid var(--warning);">
+                                    <h4 style="font-weight: 800; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-bullhorn" style="color: var(--warning);"></i> Notice Board
+                                    </h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+                                        The Terminal examinations will start next month. Ensure all preparation is complete.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Logs Tab -->
+                    <div id="sec-stud-attendance" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-clipboard-user"></i> My Attendance Logs</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="student-attendance-log-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Day Check</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Loaded via script -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Marks Card Tab -->
+                    <div id="sec-stud-marks" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-list-check"></i> My Academic Record</h3>
+                        </div>
+                        
+                        <div class="table-responsive" style="margin-bottom: 2rem;">
+                            <h4 style="margin: 1rem; font-weight: 800; color: var(--primary);">Weekly Mock Tests</h4>
+                            <table id="student-weekly-marks-table">
+                                <thead>
+                                    <tr>
+                                        <th>Subject Name</th>
+                                        <th>Score Secured</th>
+                                        <th>Maximum Marks</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="table-responsive">
+                            <h4 style="margin: 1rem; font-weight: 800; color: var(--secondary);">Monthly Evaluations</h4>
+                            <table id="student-monthly-marks-table">
+                                <thead>
+                                    <tr>
+                                        <th>Subject Name</th>
+                                        <th>Score Secured</th>
+                                        <th>Maximum Marks</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Timetable Tab -->
+                    <div id="sec-stud-timetable" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-calendar-day"></i> Weekly Timetable Schedule</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="student-timetable-grid">
+                                <thead>
+                                    <tr>
+                                        <th>Timing Period</th>
+                                        <th>Monday</th>
+                                        <th>Tuesday</th>
+                                        <th>Wednesday</th>
+                                        <th>Thursday</th>
+                                        <th>Friday</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Student Fees Status Tab -->
+                    <div id="sec-stud-fees" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-indian-rupee-sign"></i> My Fees Status</h3>
+                        </div>
+                        <div id="stud-fees-content">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Student Exam Schedule Tab -->
+                    <div id="sec-stud-exams" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-file-pen"></i> My Exam Schedule</h3>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Upcoming tests and examinations scheduled for your standard level.</p>
+                        <div class="table-responsive">
+                            <table id="stud-exams-table">
+                                <thead>
+                                    <tr>
+                                        <th>Exam / Test Name</th>
+                                        <th>Subject</th>
+                                        <th>Date</th>
+                                        <th>Start Time</th>
+                                        <th>Duration</th>
+                                        <th>Max Marks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Personal Profile Tab -->
+                    <div id="sec-stud-profile" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-circle-info"></i> Student & Parent Profile</h3>
+                        </div>
+                        
+                        <div class="glass" style="padding: 2.5rem; border-radius: var(--radius-lg); margin-bottom: 2rem;">
+                            <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 2.5rem; flex-wrap: wrap;">
+                                <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; font-weight: 800; box-shadow: var(--shadow);">
+                                    <span id="stud-profile-avatar-letters">S</span>
+                                </div>
+                                <div>
+                                    <h4 id="stud-profile-full-name" style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.3rem;">Student Name</h4>
+                                    <p id="stud-profile-subtitle" style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">Roll Number: 1001 • Class: 10th</p>
+                                </div>
+                            </div>
+                            
+                            <h4 style="font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-card); padding-bottom: 0.5rem;">
+                                <i class="fas fa-user-graduate"></i> Academic & Personal Information
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student ID</label>
+                                    <span id="stud-profile-studentid" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">STU-1001</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Date of Birth</label>
+                                    <span id="stud-profile-dob" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Gender</label>
+                                    <span id="stud-profile-gender" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Standard Level</label>
+                                    <span id="stud-profile-standard" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">10th Standard</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Assigned Section</label>
+                                    <span id="stud-profile-section" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">A</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Academic Stream/Group</label>
+                                    <span id="stud-profile-group" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Science</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student Email</label>
+                                    <span id="stud-profile-email" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">student@schoolhub.edu</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student Contact</label>
+                                    <span id="stud-profile-phone" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Admission Date</label>
+                                    <span id="stud-profile-admission" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Fees Status</label>
+                                    <span id="stud-profile-fees" class="badge badge-success" style="font-size: 0.95rem; font-weight: 700;">Paid</span>
+                                </div>
+                            </div>
+
+                            <h4 style="font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-card); padding-bottom: 0.5rem;">
+                                <i class="fas fa-people-roof"></i> Parent & Guardian Information
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                                <div class="parent-sub-card">
+                                    <div class="parent-sub-card-header"><i class="fas fa-person"></i> Father's Details</div>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Name:</strong> <span id="stud-profile-father-name">--</span></p>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Phone:</strong> <span id="stud-profile-father-phone">--</span></p>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Email:</strong> <span id="stud-profile-father-email">--</span></p>
+                                    <p style="font-size: 0.9rem;"><strong>Occupation:</strong> <span id="stud-profile-father-occ">--</span></p>
+                                </div>
+                                <div class="parent-sub-card">
+                                    <div class="parent-sub-card-header"><i class="fas fa-person-dress"></i> Mother's Details</div>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Name:</strong> <span id="stud-profile-mother-name">--</span></p>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Phone:</strong> <span id="stud-profile-mother-phone">--</span></p>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Email:</strong> <span id="stud-profile-mother-email">--</span></p>
+                                    <p style="font-size: 0.9rem;"><strong>Occupation:</strong> <span id="stud-profile-mother-occ">--</span></p>
+                                </div>
+                                <div class="parent-sub-card">
+                                    <div class="parent-sub-card-header"><i class="fas fa-phone-volume"></i> Emergency Contact</div>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Contact Name:</strong> <span id="stud-profile-emer-name">--</span></p>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;"><strong>Relationship:</strong> <span id="stud-profile-emer-rel">--</span></p>
+                                    <p style="font-size: 0.9rem;"><strong>Emergency Phone:</strong> <span id="stud-profile-emer-phone">--</span></p>
+                                </div>
+                                <div class="parent-sub-card">
+                                    <div class="parent-sub-card-header"><i class="fas fa-location-dot"></i> Residential Address</div>
+                                    <p style="font-size: 0.9rem; margin-bottom: 0.4rem;" id="stud-profile-res-street">--</p>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted);" id="stud-profile-res-city-state">--</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student My Reviews Tab -->
+                    <div id="sec-stud-reviews" class="dashboard-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-star-half-stroke"></i> My Reviews & Faculty Feedback</h3>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">View performance reviews and ratings published by academic coordinators and teachers.</p>
+                        
+                        <div class="rating-badge-large" id="stud-reviews-summary-badge">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2.8rem; font-weight: 800; color: var(--primary); line-height: 1;" id="stud-reviews-avg-rating-val">0.0</div>
+                                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Average Rating</span>
+                            </div>
+                            <div style="border-left: 1px solid var(--border-card); padding-left: 1.5rem; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;">
+                                <div class="stars-container" id="stud-reviews-avg-stars-container" style="font-size: 1.4rem;"></div>
+                                <p style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;" id="stud-reviews-count-text">Based on 0 feedback ratings</p>
+                            </div>
+                        </div>
+
+                        <div id="stud-reviews-list-container">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Area -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 SchoolHub - Comprehensive School Management System. All rights reserved.</p>
+            <p>Designed for educational excellence, scalability, and performance.</p>
+        </div>
+    </footer>
+
+    <!-- ADD/EDIT STUDENT MODAL (With Student & Parent Tabs) -->
+    <div class="modal" id="student-crud-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="modal-student-title"><i class="fas fa-user-plus"></i> Add New Student</h3>
+                <button class="modal-close-btn" onclick="closeStudentModal()">&times;</button>
+            </div>
+            <div class="modal-nav-tabs">
+                <button type="button" class="modal-tab-btn active" id="modal-tab-btn-student" onclick="switchModalTab('student')">
+                    <i class="fas fa-user-graduate"></i> 1. Student Information
+                </button>
+                <button type="button" class="modal-tab-btn" id="modal-tab-btn-parent" onclick="switchModalTab('parent')">
+                    <i class="fas fa-people-roof"></i> 2. Parent / Guardian Details
+                </button>
+            </div>
+            <form onsubmit="handleStudentFormSubmit(event)" id="student-crud-form" novalidate>
+                <input type="hidden" id="modal-student-index" value="-1">
+                <div class="modal-body">
+                    <!-- Tab 1: Student Details -->
+                    <div id="modal-tab-student" class="modal-tab-pane active">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="modal-input-name">Full Name *</label>
+                                <div class="input-wrapper" style="position: relative;">
+                                    <i class="fas fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);"></i>
+                                    <input type="text" id="modal-input-name" required placeholder="e.g. Sarah Miller" style="padding-left: 2.6rem;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-roll">Roll Number *</label>
+                                <div class="input-wrapper" style="position: relative;">
+                                    <i class="fas fa-id-badge" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);"></i>
+                                    <input type="text" id="modal-input-roll" required placeholder="e.g. 1005" style="padding-left: 2.6rem;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="modal-input-studentid">Student ID</label>
+                                <input type="text" id="modal-input-studentid" placeholder="e.g. STU-1005" style="padding-left: 1rem;">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-dob">Date of Birth</label>
+                                <input type="date" id="modal-input-dob" style="padding: 0.5rem 1rem;">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-gender">Gender</label>
+                                <select id="modal-input-gender" style="padding-left: 1rem;">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="modal-input-standard">Standard Level *</label>
+                                <select id="modal-input-standard" required style="padding-left: 1rem;">
+                                    <!-- Standard Options injected via JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-section">Section *</label>
+                                <select id="modal-input-section" required style="padding-left: 1rem;">
+                                    <option value="A">Section A</option>
+                                    <option value="B">Section B</option>
+                                    <option value="C">Section C</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-group">Academic Stream</label>
+                                <select id="modal-input-group" required style="padding-left: 1rem;">
+                                    <option value="General">General (Pre-KG to 10th)</option>
+                                    <option value="Science">Science (11th & 12th)</option>
+                                    <option value="Commerce">Commerce (11th & 12th)</option>
+                                    <option value="Arts">Arts (11th & 12th)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="modal-input-admission">Admission Date</label>
+                                <input type="date" id="modal-input-admission" style="padding: 0.5rem 1rem;">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-email">Student Email</label>
+                                <input type="email" id="modal-input-email" placeholder="student@example.com" style="padding-left: 1rem;">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-phone">Student Phone</label>
+                                <input type="tel" id="modal-input-phone" placeholder="+91 98765 00000" style="padding-left: 1rem;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="modal-input-fees">Fees Status</label>
+                                <select id="modal-input-fees" required style="padding-left: 1rem;">
+                                    <option value="Paid">Paid</option>
+                                    <option value="Partially Paid">Partially Paid</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-fees-amount">Total Fee Amount (₹)</label>
+                                <input type="number" id="modal-input-fees-amount" value="25000" style="padding-left: 1rem;">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-input-fees-paid">Fee Paid (₹)</label>
+                                <input type="number" id="modal-input-fees-paid" value="25000" style="padding-left: 1rem;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal-input-address">Student Residential Address</label>
+                            <input type="text" id="modal-input-address" placeholder="House/Flat, Street name..." style="padding-left: 1rem;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="modal-input-comment">Remarks / Faculty Comments</label>
+                            <textarea id="modal-input-comment" rows="2" placeholder="Teacher's academic remarks..." style="padding: 0.6rem 1rem; width: 100%; border: 1px solid var(--border-input); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);"></textarea>
+                        </div>
+
+                        <!-- In-Tab Action Bar for Student Details -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed var(--border-card); flex-wrap: wrap; gap: 0.8rem;">
+                            <span style="font-size: 0.85rem; color: var(--text-muted);"><i class="fas fa-circle-info"></i> Step 1: Student Information</span>
+                            <div style="display: flex; gap: 0.6rem;">
+                                <button type="button" class="btn btn-secondary" onclick="switchModalTab('parent')" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                    Next: Parent Details <i class="fas fa-arrow-right"></i>
+                                </button>
+                                <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                                    <i class="fas fa-floppy-disk"></i> Save Student
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Parent / Guardian Details -->
+                    <div id="modal-tab-parent" class="modal-tab-pane">
+                        <!-- Father's Details Card -->
+                        <div class="parent-sub-card" style="margin-bottom: 1.5rem;">
+                            <div class="parent-sub-card-header"><i class="fas fa-person"></i> Father / Guardian Information</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="modal-input-father-name">Father / Guardian Name</label>
+                                    <input type="text" id="modal-input-father-name" placeholder="Father's full name" style="padding-left: 1rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="modal-input-father-phone">Father Phone Number</label>
+                                    <input type="tel" id="modal-input-father-phone" placeholder="e.g. +91 98401 23456" style="padding-left: 1rem;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mother's Details Card -->
+                        <div class="parent-sub-card">
+                            <div class="parent-sub-card-header"><i class="fas fa-person-dress"></i> Mother / Guardian Information</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="modal-input-mother-name">Mother / Guardian Name</label>
+                                    <input type="text" id="modal-input-mother-name" placeholder="Mother's full name" style="padding-left: 1rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="modal-input-mother-phone">Mother Phone Number</label>
+                                    <input type="tel" id="modal-input-mother-phone" placeholder="e.g. +91 98401 65432" style="padding-left: 1rem;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- In-Tab Action Bar for Parent Details -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed var(--border-card); flex-wrap: wrap; gap: 0.8rem;">
+                            <button type="button" class="btn btn-secondary" onclick="switchModalTab('student')" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                <i class="fas fa-arrow-left"></i> Back to Student Info
+                            </button>
+                            <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700;">
+                                <i class="fas fa-floppy-disk"></i> Save Student
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fas fa-database" style="color: var(--primary);"></i> Saves directly to MongoDB database
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="modal-student-save-btn" style="padding: 0.75rem 1.8rem; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 14px rgba(37,99,235,0.45); display: inline-flex; align-items: center; gap: 0.6rem;">
+                            <i class="fas fa-floppy-disk"></i> Save Student to Database
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- STUDENT VIEW DETAILS MODAL -->
+    <div class="modal" id="student-view-modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3><i class="fas fa-id-card"></i> Student & Parent Profile</h3>
+                <button class="modal-close-btn" onclick="closeViewStudentModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="view-student-modal-body">
+                <!-- Injected dynamically via JS -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeViewStudentModal()">Close</button>
+                <button type="button" class="btn btn-primary" id="view-modal-edit-btn" onclick="">
+                    <i class="fas fa-edit"></i> Edit Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMETABLE IMPORT MODAL -->
+    <div class="modal" id="timetable-import-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cloud-upload-alt"></i> Import Timetable Schema</h3>
+                <button class="modal-close-btn" onclick="closeImportTimetableModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Paste a JSON array representing the weekly timetable schedule for the selected standard level. 
+                </p>
+                <div class="form-group">
+                    <label for="timetable-import-json">Timetable Data (JSON)</label>
+                    <textarea id="timetable-import-json" rows="10" style="font-family: monospace; font-size: 0.8rem; padding: 1rem; width: 100%; border: 1px solid var(--border-input); border-radius: var(--radius-sm); background: var(--bg-main); color: var(--text-main);"></textarea>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-main); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-card);">
+                    <strong>Structure Tip:</strong> A valid array requires exactly 3 period rows with Monday-Friday keys. Ex: <code>[{"period":"9:00-10:00","mon":"Math","tue":"Science",...}]</code>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeImportTimetableModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="importTimetableJSON()">Import Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORE SYSTEM SCRIPTS -->
+    <script defer src="/static/js/app.js"></script>
+</body>
+</html>
