@@ -2,7 +2,16 @@
 // SchoolHub - Full-Stack Application Client (Connected to MongoDB Atlas API)
 // ==========================================================================
 
-const API_BASE = "http://localhost:8000/api";
+// Dynamically resolve API URL:
+// 1. window.API_BASE (if injected via route.ts from NEXT_PUBLIC_API_URL)
+// 2. Relative "/api" (which Next.js automatically rewrites to BACKEND_URL or localhost:8000)
+// 3. Direct localhost only if opened directly from local filesystem (file://)
+const API_BASE = (typeof window !== "undefined" && window.API_BASE)
+    ? window.API_BASE
+    : (typeof window !== "undefined" && window.location.protocol === 'file:' 
+        ? "http://localhost:8000/api" 
+        : "/api");
+
 
 // Global In-Memory Cache (Synchronized with MongoDB Atlas)
 let StandardsList = [];
