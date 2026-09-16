@@ -3,11 +3,13 @@ from typing import List, Optional
 
 class TimetablePeriod(BaseModel):
     period: str
-    mon: str = "-"
-    tue: str = "-"
-    wed: str = "-"
-    thu: str = "-"
-    fri: str = "-"
+    hour: str = ""
+    subject: str = ""
+    mon: Optional[str] = "-"
+    tue: Optional[str] = "-"
+    wed: Optional[str] = "-"
+    thu: Optional[str] = "-"
+    fri: Optional[str] = "-"
 
 class TimetableUpdate(BaseModel):
     standard: str

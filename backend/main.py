@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.database import connect_to_mongo, close_mongo_connection, get_database
-from app.core.seed import seed_initial_data
-from app.routers import students, standards, timetables, auth, exams
+from backend.app.core.database import connect_to_mongo, close_mongo_connection, get_database
+from backend.app.core.seed import seed_initial_data
+from backend.app.routers import students, standards, timetables, auth, exams, tests
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,6 +44,7 @@ app.include_router(students.router)
 app.include_router(standards.router)
 app.include_router(timetables.router)
 app.include_router(exams.router)
+app.include_router(tests.router)
 
 @app.get("/")
 def read_root():

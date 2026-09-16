@@ -18,7 +18,8 @@ let StandardsList = [];
 let AppStore = {
     students: [],
     timetables: {},
-    exams: []
+    exams: [],
+    tests: []
 };
 
 let Session = {
@@ -107,6 +108,13 @@ async function initStore() {
             AppStore.exams = [];
         }
 
+        // 5. Fetch Tests from MongoDB
+        try {
+            await loadTestsFromAPI();
+        } catch (e) {
+            console.warn("Could not fetch tests:", e);
+        }
+
     } catch (e) {
         console.error("Initialization error:", e);
     }
@@ -143,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         dateSelect.value = todayStr;
     }
 
-    // ── Restore session from sessionStorage on page reload ────────────────
+    // â”€â”€ Restore session from sessionStorage on page reload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const savedUserType = sessionStorage.getItem("currentUserType");
     const savedRole     = sessionStorage.getItem("userRole");
     const savedRoll     = sessionStorage.getItem("currentStudentRoll");
@@ -334,8 +342,10 @@ function populateFormOptions() {
         document.getElementById('modal-input-standard'),
         document.getElementById('attendance-standard-select'),
         document.getElementById('marks-standard-select'),
+        document.getElementById('performance-standard-select'),
         document.getElementById('ranks-standard-select'),
         document.getElementById('timetable-standard-select'),
+        document.getElementById('reviews-standard-select'),
         document.getElementById('fees-filter-standard'),
         document.getElementById('exams-filter-standard'),
         document.getElementById('exam-modal-standard')
@@ -343,27 +353,38 @@ function populateFormOptions() {
 
     standardSelectors.forEach(select => {
         if (select) {
-            const firstOption = (select.id === 'student-filter-standard' || select.id === 'fees-filter-standard' || select.id === 'exams-filter-standard')
+            const firstOption = (select.id === 'student-filter-standard' || select.id === 'fees-filter-standard' || select.id === 'exams-filter-standard' || select.id === 'performance-standard-select' || select.id === 'reviews-standard-select')
                 ? '<option value="All">All Standards</option>'
                 : '';
             select.innerHTML = firstOption + StandardsList.map(std => `<option value="${escapeHtml(std)}">${escapeHtml(std)}</option>`).join('');
         }
     });
 
-    // Populate reviews student selector
-    populateReviewsStudentSelect();
+    // Populate reviews student selector based on current standard
+    onReviewsStandardChange();
+}
+
+function onReviewsStandardChange() {
+    const stdSelect = document.getElementById('reviews-standard-select');
+    const selectedStd = stdSelect ? stdSelect.value : 'All';
+    const revSelect = document.getElementById('reviews-student-select');
+    if (!revSelect) return;
+
+    let filtered = AppStore.students;
+    if (selectedStd && selectedStd !== 'All') {
+        filtered = filtered.filter(s => s.standard === selectedStd);
+    }
+    const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    if (sorted.length === 0) {
+        revSelect.innerHTML = `<option value="">No students enrolled in ${escapeHtml(selectedStd)}</option>`;
+    } else {
+        revSelect.innerHTML = sorted.map(s => `<option value="${escapeHtml(s.rollNumber)}">${escapeHtml(s.name)} (${escapeHtml(s.rollNumber)} - ${escapeHtml(s.standard)})</option>`).join('');
+    }
+    loadStudentReviewsInStaff();
 }
 
 function populateReviewsStudentSelect() {
-    const revSelect = document.getElementById('reviews-student-select');
-    if (revSelect) {
-        const sorted = [...AppStore.students].sort((a, b) => a.name.localeCompare(b.name));
-        if (sorted.length === 0) {
-            revSelect.innerHTML = `<option value="">No students available</option>`;
-        } else {
-            revSelect.innerHTML = sorted.map(s => `<option value="${escapeHtml(s.rollNumber)}">${escapeHtml(s.name)} (${escapeHtml(s.rollNumber)} - ${escapeHtml(s.standard)})</option>`).join('');
-        }
-    }
+    onReviewsStandardChange();
 }
 
 // ------------------ Staff Dashboard State Sync ------------------
@@ -466,9 +487,13 @@ function filterByStandardCard(std) {
     setSelect('student-filter-standard');
     setSelect('attendance-standard-select');
     setSelect('marks-standard-select');
+    setSelect('performance-standard-select');
     setSelect('ranks-standard-select');
     setSelect('timetable-standard-select');
+    setSelect('reviews-standard-select');
+    setSelect('fees-filter-standard');
 
+    onReviewsStandardChange();
     switchStaffTab("students");
 }
 
@@ -487,6 +512,7 @@ async function renderStudentsTable() {
     const search = (document.getElementById("student-search-query")?.value || "").toLowerCase().trim();
     const filterStandard = document.getElementById("student-filter-standard")?.value || "All";
     const filterSection = document.getElementById("student-filter-section")?.value || "All";
+    const filterStream = document.getElementById("student-filter-stream")?.value || "All";
     const filterFees = document.getElementById("student-filter-fees")?.value || "All";
     const tbody = document.getElementById("students-table")?.querySelector("tbody");
     if (!tbody) return;
@@ -510,9 +536,11 @@ async function renderStudentsTable() {
 
         const matchesStandard = filterStandard === "All" || s.standard === filterStandard;
         const matchesSection = filterSection === "All" || (s.section || "A") === filterSection;
-        const matchesFees = filterFees === "All" || (s.feesStatus || "Paid") === filterFees;
+        const matchesStream = filterStream === "All" || (s.group || "General") === filterStream;
+        const sAdvance = s.advanceFee || s.feesStatus || "Paid";
+        const matchesFees = filterFees === "All" || sAdvance === filterFees;
 
-        return matchesSearch && matchesStandard && matchesSection && matchesFees;
+        return matchesSearch && matchesStandard && matchesSection && matchesStream && matchesFees;
     });
 
     if (filteredList.length === 0) {
@@ -523,8 +551,8 @@ async function renderStudentsTable() {
     const isStaffOrAdmin = Session.userRole === 'admin' || Session.userRole === 'staff' || Session.currentUserType === 'staff';
 
     filteredList.forEach((s) => {
-        const feesStatus = s.feesStatus || "Paid";
-        const feeBadgeClass = feesStatus === "Paid" ? "badge-success" : feesStatus === "Partially Paid" ? "badge-warning" : "badge-danger";
+        const feesStatus = s.advanceFee || s.feesStatus || "Paid";
+        const feeBadgeClass = feesStatus === "Paid" ? "badge-success" : "badge-danger";
         const parent = s.parent || {};
         const parentPhone = parent.fatherPhone || parent.motherPhone || parent.emergencyContactPhone || s.phone || "Not provided";
         const parentName = parent.fatherName || parent.motherName || parent.emergencyContactName || "Parent";
@@ -538,14 +566,14 @@ async function renderStudentsTable() {
                 <td><code>${escapeHtml(s.rollNumber)}</code></td>
                 <td>${escapeHtml(s.standard)}</td>
                 <td><span class="badge badge-success">Section ${escapeHtml(s.section || 'A')}</span></td>
-                <td>${escapeHtml(s.group || 'General')}</td>
+                <td><span class="badge badge-primary" style="font-size: 0.75rem;">${escapeHtml(s.group || 'General')}</span></td>
                 <td>
                     <div style="font-size: 0.85rem; font-weight: 600;">
                         <i class="fas fa-phone" style="color: var(--primary); font-size: 0.75rem;"></i> ${escapeHtml(parentPhone)}
                     </div>
                     <small style="color: var(--text-muted); font-size: 0.75rem;">${escapeHtml(parentName)}</small>
                 </td>
-                <td><span class="badge ${feeBadgeClass}">${escapeHtml(feesStatus)}</span></td>
+                <td><span class="badge ${feeBadgeClass}">Advance: ${escapeHtml(feesStatus)}</span></td>
                 <td>
                     <div class="action-btns">
                         <button class="btn btn-secondary btn-icon" onclick="openViewStudentModal('${escapeHtml(s.rollNumber)}')" title="View Full Profile">
@@ -579,7 +607,7 @@ function openAddStudentModal() {
     document.getElementById("modal-input-gender").value = "Male";
     document.getElementById("modal-input-standard").selectedIndex = 0;
     document.getElementById("modal-input-section").selectedIndex = 0;
-    document.getElementById("modal-input-group").selectedIndex = 0;
+    document.getElementById("modal-input-group").value = "General";
     document.getElementById("modal-input-admission").value = new Date().toISOString().split('T')[0];
     document.getElementById("modal-input-email").value = "";
     document.getElementById("modal-input-phone").value = "";
@@ -624,7 +652,7 @@ function openEditStudentModal(rollNumber) {
     document.getElementById("modal-input-email").value = student.email || "";
     document.getElementById("modal-input-phone").value = student.phone || "";
     document.getElementById("modal-input-address").value = student.address || "";
-    document.getElementById("modal-input-fees").value = student.feesStatus || "Paid";
+    document.getElementById("modal-input-fees").value = student.advanceFee || student.feesStatus || "Paid";
     document.getElementById("modal-input-fees-amount").value = student.feesAmount !== undefined ? student.feesAmount : 25000;
     document.getElementById("modal-input-fees-paid").value = student.feesPaid !== undefined ? student.feesPaid : 25000;
     document.getElementById("modal-input-comment").value = student.performanceComment || "";
@@ -658,17 +686,17 @@ function openViewStudentModal(rollNumber) {
     if (!modalBody) return;
 
     const p = s.parent || {};
-    const feesStatus = s.feesStatus || "Paid";
-    const feeBadgeClass = feesStatus === "Paid" ? "badge-success" : feesStatus === "Partially Paid" ? "badge-warning" : "badge-danger";
+    const advanceStatus = s.advanceFee || s.feesStatus || "Paid";
+    const feeBadgeClass = advanceStatus === "Paid" ? "badge-success" : "badge-danger";
 
     modalBody.innerHTML = `
         <div class="view-profile-header">
             <div class="view-profile-avatar">${escapeHtml((s.name || 'S').charAt(0).toUpperCase())}</div>
             <div class="view-profile-info">
                 <h3>${escapeHtml(s.name)}</h3>
-                <p>Roll No: <strong>${escapeHtml(s.rollNumber)}</strong> • ID: <strong>${escapeHtml(s.studentId || ('STU-' + s.rollNumber))}</strong> • Class: <strong>${escapeHtml(s.standard)} (Section ${escapeHtml(s.section || 'A')})</strong></p>
+                <p>Roll No: <strong>${escapeHtml(s.rollNumber)}</strong> â€¢ ID: <strong>${escapeHtml(s.studentId || ('STU-' + s.rollNumber))}</strong> â€¢ Class: <strong>${escapeHtml(s.standard)} (Section ${escapeHtml(s.section || 'A')})</strong></p>
                 <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center;">
-                    <span class="badge ${feeBadgeClass}">Fees: ${escapeHtml(feesStatus)}</span>
+                    <span class="badge ${feeBadgeClass}">Advance Fee: ${escapeHtml(advanceStatus)}</span>
                     <span class="badge badge-success">${escapeHtml(s.group || 'General')}</span>
                 </div>
             </div>
@@ -681,9 +709,10 @@ function openViewStudentModal(rollNumber) {
             <div class="view-info-item"><label>Date of Birth</label><span>${escapeHtml(s.dob || 'Not specified')}</span></div>
             <div class="view-info-item"><label>Gender</label><span>${escapeHtml(s.gender || 'Not specified')}</span></div>
             <div class="view-info-item"><label>Admission Date</label><span>${escapeHtml(s.admissionDate || 'Not specified')}</span></div>
+            <div class="view-info-item"><label>Academic Stream</label><span>${escapeHtml(s.group || 'General')}</span></div>
             <div class="view-info-item"><label>Student Email</label><span>${escapeHtml(s.email || 'Not provided')}</span></div>
             <div class="view-info-item"><label>Student Phone</label><span>${escapeHtml(s.phone || 'Not provided')}</span></div>
-            <div class="view-info-item"><label>Total / Paid Fee</label><span>₹${s.feesAmount || 0} / ₹${s.feesPaid || 0}</span></div>
+            <div class="view-info-item"><label>Advance Fee</label><span>${escapeHtml(advanceStatus)}</span></div>
             <div class="view-info-item" style="grid-column: 1 / -1;"><label>Address</label><span>${escapeHtml(s.address || 'Not specified')}</span></div>
             <div class="view-info-item" style="grid-column: 1 / -1;"><label>Faculty Remarks</label><span>"${escapeHtml(s.performanceComment || 'No remarks')}"</span></div>
         </div>
@@ -826,6 +855,7 @@ async function handleStudentFormSubmit(event) {
                     phone: phone,
                     address: address,
                     feesStatus: feesStatus,
+                    advanceFee: feesStatus,
                     feesAmount: feesAmount,
                     feesPaid: feesPaid,
                     performanceComment: comment || "Enrolled recently.",
@@ -849,6 +879,7 @@ async function handleStudentFormSubmit(event) {
                     phone: phone,
                     address: address,
                     feesStatus: feesStatus,
+                    advanceFee: feesStatus,
                     feesAmount: feesAmount,
                     feesPaid: feesPaid,
                     performanceComment: comment,
@@ -894,37 +925,49 @@ async function deleteStudent(rollNumber) {
 
 // ------------------ 3. Attendance Management Module ------------------
 function loadAttendanceForSelectedDate() {
+    const standard = document.getElementById("attendance-standard-select")?.value;
     const date = document.getElementById("attendance-date-select")?.value;
     const tbody = document.getElementById("attendance-marking-table")?.querySelector("tbody");
     if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    if (!date) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">Please select a valid date.</td></tr>`;
+    if (!standard) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Please select a standard level above to mark attendance.</td></tr>`;
+        updateAttendanceDateStats([], date);
         return;
     }
 
-    const sortedStudents = [...AppStore.students].sort((a, b) => a.name.localeCompare(b.name));
+    if (!date) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Please select a valid date.</td></tr>`;
+        updateAttendanceDateStats([], date);
+        return;
+    }
+
+    const sortedStudents = AppStore.students
+        .filter(s => s.standard === standard)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     if (sortedStudents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student enrollments found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student enrollments found in ${escapeHtml(standard)}.</td></tr>`;
         updateAttendanceDateStats(sortedStudents, date);
         return;
     }
 
     sortedStudents.forEach(s => {
         const status = (s.attendance && s.attendance[date]) || "";
+        const stuId = s.studentId || ('STU-' + s.rollNumber);
 
         tbody.innerHTML += `
             <tr>
                 <td><code>${escapeHtml(s.rollNumber)}</code></td>
+                <td><strong style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(stuId)}</strong></td>
                 <td><strong>${escapeHtml(s.name)}</strong></td>
                 <td>${escapeHtml(s.standard)}</td>
                 <td>
                     <div class="toggle-btn-group">
-                        <button class="toggle-btn present ${status === 'P' ? 'active' : ''}" onclick="toggleStudentAttendance('${escapeHtml(s.rollNumber)}', '${escapeHtml(date)}', 'P')">Present</button>
-                        <button class="toggle-btn absent ${status === 'A' ? 'active' : ''}" onclick="toggleStudentAttendance('${escapeHtml(s.rollNumber)}', '${escapeHtml(date)}', 'A')">Absent</button>
+                        <button class="toggle-btn present ${status === 'P' ? 'active' : ''}" onclick="toggleStudentAttendance('${escapeHtml(s.rollNumber)}', '${escapeHtml(date)}', 'P', '${escapeHtml(s.standard)}', '${escapeHtml(stuId)}')">Present</button>
+                        <button class="toggle-btn absent ${status === 'A' ? 'active' : ''}" onclick="toggleStudentAttendance('${escapeHtml(s.rollNumber)}', '${escapeHtml(date)}', 'A', '${escapeHtml(s.standard)}', '${escapeHtml(stuId)}')">Absent</button>
                     </div>
                 </td>
             </tr>
@@ -934,18 +977,20 @@ function loadAttendanceForSelectedDate() {
     updateAttendanceDateStats(sortedStudents, date);
 }
 
-async function toggleStudentAttendance(roll, date, newStatus) {
+async function toggleStudentAttendance(roll, date, newStatus, standard, studentId) {
     try {
         const response = await apiRequest('/students/attendance/toggle', {
             method: 'POST',
             body: JSON.stringify({
                 rollNumber: roll,
                 date: date,
-                status: newStatus
+                status: newStatus,
+                standard: standard,
+                studentId: studentId
             })
         });
 
-        // Update local store immediately
+        // Update local store immediately without duplicates
         const student = AppStore.students.find(s => s.rollNumber === roll);
         if (student) {
             if (!student.attendance) student.attendance = {};
@@ -976,12 +1021,63 @@ function updateAttendanceDateStats(filteredStudents, date) {
     const totalMarked = present + absent;
     const rate = totalMarked > 0 ? Math.round((present / totalMarked) * 100) : 0;
 
-    document.getElementById("attendance-date-present").innerText = present;
-    document.getElementById("attendance-date-absent").innerText = absent;
-    document.getElementById("attendance-date-rate").innerText = `${rate}%`;
+    const pEl = document.getElementById("attendance-date-present");
+    const aEl = document.getElementById("attendance-date-absent");
+    const rEl = document.getElementById("attendance-date-rate");
+    if (pEl) pEl.innerText = present;
+    if (aEl) aEl.innerText = absent;
+    if (rEl) rEl.innerText = `${rate}%`;
 }
 
 // ------------------ 4. Test Marks Management Module ------------------
+function onMarksStandardOrTestChange() {
+    loadMarksTable();
+}
+
+function activateAddMarksFlow() {
+    const stdSelect = document.getElementById("marks-standard-select");
+    if (stdSelect) stdSelect.focus();
+    loadMarksTable();
+}
+
+async function loadTestsFromAPI() {
+    try {
+        const tests = await apiRequest('/tests');
+        AppStore.tests = tests || [];
+        const testSelect = document.getElementById("marks-test-type");
+        if (testSelect && AppStore.tests.length > 0) {
+            const currentVal = testSelect.value;
+            testSelect.innerHTML = AppStore.tests.map(t => `<option value="${escapeHtml(t.key)}">${escapeHtml(t.name)}</option>`).join('');
+            if (currentVal && AppStore.tests.some(t => t.key === currentVal)) {
+                testSelect.value = currentVal;
+            }
+        }
+    } catch (e) {
+        console.warn("Could not fetch tests from MongoDB:", e);
+    }
+}
+
+async function promptNewTestName() {
+    const testName = prompt("Enter new Test / Exam Name (e.g. Unit Test 1, Quarterly Exam, Pre-Board):");
+    if (!testName || !testName.trim()) return;
+    const cleanName = testName.trim();
+    try {
+        const created = await apiRequest('/tests', {
+            method: 'POST',
+            body: JSON.stringify({ name: cleanName, standard: "All" })
+        });
+        await loadTestsFromAPI();
+        const testSelect = document.getElementById("marks-test-type");
+        if (testSelect && created) {
+            testSelect.value = created.key || cleanName;
+        }
+        loadMarksTable();
+        alert(`Test '${cleanName}' added and saved to MongoDB!`);
+    } catch (e) {
+        alert("Error saving test to MongoDB: " + e.message);
+    }
+}
+
 function loadMarksTable() {
     const testType = document.getElementById("marks-test-type")?.value || "weekly";
     const standard = document.getElementById("marks-standard-select")?.value;
@@ -990,10 +1086,16 @@ function loadMarksTable() {
 
     tbody.innerHTML = "";
 
+    if (!standard) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Please select a standard level above.</td></tr>`;
+        document.getElementById("marks-class-average").innerText = "0%";
+        return;
+    }
+
     const students = AppStore.students.filter(s => s.standard === standard);
 
     if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student enrollments in ${escapeHtml(standard || 'selected class')}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student enrollments in ${escapeHtml(standard)}.</td></tr>`;
         document.getElementById("marks-class-average").innerText = "0%";
         return;
     }
@@ -1009,6 +1111,7 @@ function loadMarksTable() {
         tbody.innerHTML += `
             <tr data-roll="${escapeHtml(s.rollNumber)}">
                 <td><code>${escapeHtml(s.rollNumber)}</code></td>
+                <td><strong style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(s.studentId || ('STU-' + s.rollNumber))}</strong></td>
                 <td><strong>${escapeHtml(s.name)}</strong></td>
                 <td><input type="number" min="0" max="100" class="marks-input eng" value="${scores.english || 0}" oninput="recalculateRowMarks(this)"></td>
                 <td><input type="number" min="0" max="100" class="marks-input math" value="${scores.math || 0}" oninput="recalculateRowMarks(this)"></td>
@@ -1021,7 +1124,8 @@ function loadMarksTable() {
     });
 
     const classAvg = Math.round(classTotalPercentages / students.length);
-    document.getElementById("marks-class-average").innerText = `${classAvg}%`;
+    const avgElem = document.getElementById("marks-class-average");
+    if (avgElem) avgElem.innerText = `${classAvg}%`;
 }
 
 function recalculateRowMarks(inputElem) {
@@ -1041,7 +1145,7 @@ function recalculateRowMarks(inputElem) {
 }
 
 async function saveActiveMarks() {
-    const testType = document.getElementById("marks-test-type").value;
+    const testType = document.getElementById("marks-test-type")?.value || "weekly";
     const rows = document.querySelectorAll("#marks-input-table tbody tr");
     if (rows.length === 0) return;
 
@@ -1064,7 +1168,7 @@ async function saveActiveMarks() {
                 })
             });
 
-            // Update local memory
+            // Update local memory without duplicates
             const student = AppStore.students.find(s => s.rollNumber === roll);
             if (student) {
                 if (!student.marks) student.marks = {};
@@ -1078,60 +1182,65 @@ async function saveActiveMarks() {
 
     if (savedCount > 0) {
         loadMarksTable();
-        alert(`Academic marksheet updated in MongoDB Atlas for ${savedCount} students.`);
+        alert(`Test marks updated successfully in MongoDB for ${savedCount} students (${testType})!`);
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FEES MANAGEMENT MODULE (Staff/Admin)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// FEES MANAGEMENT MODULE (Staff/Admin) â€” Advance Fee + Month-Wise (Juneâ€“May)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const MONTHS_ORDER  = ['june','july','august','september','october','november','december','january','february','march','april','may'];
+const MONTHS_LABELS = {june:'June',july:'July',august:'August',september:'September',october:'October',november:'November',december:'December',january:'January',february:'February',march:'March',april:'April',may:'May'};
+
 function renderFeesTable() {
     const search   = (document.getElementById('fees-search-query')?.value || '').toLowerCase().trim();
-    const fStatus  = document.getElementById('fees-filter-status')?.value  || 'All';
+    const fAdvance = document.getElementById('fees-filter-advance')?.value  || 'All';
     const fStd     = document.getElementById('fees-filter-standard')?.value || 'All';
     const tbody    = document.getElementById('fees-management-table')?.querySelector('tbody');
     if (!tbody) return;
 
     const filtered = AppStore.students.filter(s => {
-        const matchSearch  = !search || s.name?.toLowerCase().includes(search) || s.rollNumber?.toLowerCase().includes(search);
-        const matchStatus  = fStatus === 'All' || (s.feesStatus || 'Paid') === fStatus;
-        const matchStd     = fStd === 'All' || s.standard === fStd;
-        return matchSearch && matchStatus && matchStd;
+        const matchSearch = !search || s.name?.toLowerCase().includes(search) || s.rollNumber?.toLowerCase().includes(search);
+        const advance     = s.advanceFee || 'Not Paid';
+        const matchAdv    = fAdvance === 'All' || advance === fAdvance;
+        const matchStd    = fStd === 'All' || s.standard === fStd;
+        return matchSearch && matchAdv && matchStd;
     });
 
-    // Update summary stats (all students, not just filtered)
-    const paid    = AppStore.students.filter(s => (s.feesStatus || 'Paid') === 'Paid').length;
-    const partial = AppStore.students.filter(s => s.feesStatus === 'Partially Paid').length;
-    const pending = AppStore.students.filter(s => s.feesStatus === 'Pending').length;
-    const paidEl = document.getElementById('fees-stat-paid');
-    const partEl = document.getElementById('fees-stat-partial');
-    const pendEl = document.getElementById('fees-stat-pending');
-    if (paidEl) paidEl.innerText = paid;
-    if (partEl) partEl.innerText = partial;
-    if (pendEl) pendEl.innerText = pending;
+    // Summary stats
+    const totalEl = document.getElementById('fees-stat-total');
+    const paidEl  = document.getElementById('fees-stat-paid');
+    const pendEl  = document.getElementById('fees-stat-pending');
+    const advPaid = AppStore.students.filter(s => (s.advanceFee || 'Not Paid') === 'Paid').length;
+    const advPend = AppStore.students.filter(s => (s.advanceFee || 'Not Paid') !== 'Paid').length;
+    if (totalEl) totalEl.innerText = AppStore.students.length;
+    if (paidEl)  paidEl.innerText  = advPaid;
+    if (pendEl)  pendEl.innerText  = advPend;
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No students match the current filter.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="17" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No students match the current filter.</td></tr>`;
         return;
     }
 
     filtered.forEach(s => {
-        const total   = s.feesAmount || 0;
-        const paidAmt = s.feesPaid   || 0;
-        const balance = Math.max(0, total - paidAmt);
-        const status  = s.feesStatus || 'Paid';
-        const badgeCls = status === 'Paid' ? 'badge-success' : status === 'Partially Paid' ? 'badge-warning' : 'badge-danger';
+        const advance  = s.advanceFee || 'Not Paid';
+        const advBadge = advance === 'Paid' ? 'badge-success' : 'badge-danger';
+        const mf = s.monthlyFees || {};
+
+        const monthCells = MONTHS_ORDER.map(m => {
+            const val = mf[m] || 'Not Paid';
+            const cls = val === 'Paid' ? 'badge-success' : 'badge-danger';
+            return `<td style="text-align:center;"><span class="badge ${cls}" style="font-size:0.65rem;">${val === 'Paid' ? '\u2714' : '\u2718'}</span></td>`;
+        }).join('');
 
         tbody.innerHTML += `
             <tr>
-                <td><strong>${escapeHtml(s.name)}</strong><div style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(s.studentId || 'STU-'+s.rollNumber)}</div></td>
+                <td><strong>${escapeHtml(s.name)}</strong><div style="font-size:0.75rem;color:var(--text-muted);">${escapeHtml(s.studentId||'STU-'+s.rollNumber)}</div></td>
                 <td><code>${escapeHtml(s.rollNumber)}</code></td>
                 <td>${escapeHtml(s.standard)}</td>
-                <td style="font-weight:700;">&#8377;${total.toLocaleString('en-IN')}</td>
-                <td style="font-weight:700;color:var(--success);">&#8377;${paidAmt.toLocaleString('en-IN')}</td>
-                <td style="font-weight:700;color:${balance > 0 ? 'var(--danger)' : 'var(--success)'};">&#8377;${balance.toLocaleString('en-IN')}</td>
-                <td><span class="badge ${badgeCls}">${escapeHtml(status)}</span></td>
+                <td><span class="badge ${advBadge}">${escapeHtml(advance)}</span></td>
+                ${monthCells}
                 <td>
                     <button class="btn btn-secondary btn-icon" onclick="openFeesModal('${escapeHtml(s.rollNumber)}')" title="Update Fees">
                         <i class="fas fa-edit" style="color:var(--primary);"></i>
@@ -1145,11 +1254,26 @@ function renderFeesTable() {
 function openFeesModal(rollNumber) {
     const s = AppStore.students.find(st => st.rollNumber === rollNumber);
     if (!s) return;
-    document.getElementById('fees-modal-roll').value         = rollNumber;
+    document.getElementById('fees-modal-roll').value = rollNumber;
     document.getElementById('fees-modal-student-name').innerText = s.name;
-    document.getElementById('fees-modal-status').value       = s.feesStatus || 'Paid';
-    document.getElementById('fees-modal-total').value        = s.feesAmount  || 0;
-    document.getElementById('fees-modal-paid').value         = s.feesPaid    || 0;
+
+    const advEl = document.getElementById('fees-modal-advance');
+    if (advEl) advEl.value = s.advanceFee || 'Not Paid';
+
+    const monthsContainer = document.getElementById('fees-modal-months-container');
+    if (monthsContainer) {
+        const mf = s.monthlyFees || {};
+        monthsContainer.innerHTML = MONTHS_ORDER.map(month => `
+            <div style="background: var(--bg-card); padding: 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card);">
+                <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.3rem; text-transform: uppercase;">${MONTHS_LABELS[month]}</label>
+                <select id="fees-modal-month-${month}" style="width: 100%; padding: 0.4rem; background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-input); border-radius: 4px; font-weight: 700; font-size: 0.85rem;">
+                    <option value="Paid"     ${(mf[month]||'Not Paid')==='Paid'    ?'selected':''}>Paid</option>
+                    <option value="Not Paid" ${(mf[month]||'Not Paid')==='Not Paid'?'selected':''}>Not Paid</option>
+                </select>
+            </div>
+        `).join('');
+    }
+
     document.getElementById('fees-edit-modal').classList.add('active');
 }
 
@@ -1159,10 +1283,14 @@ function closeFeesModal() {
 
 async function handleFeesFormSubmit(event) {
     event.preventDefault();
-    const roll    = document.getElementById('fees-modal-roll').value;
-    const status  = document.getElementById('fees-modal-status').value;
-    const total   = parseFloat(document.getElementById('fees-modal-total').value) || 0;
-    const paid    = parseFloat(document.getElementById('fees-modal-paid').value)  || 0;
+    const roll       = document.getElementById('fees-modal-roll').value;
+    const advanceFee = document.getElementById('fees-modal-advance')?.value || 'Not Paid';
+
+    const monthlyFees = {};
+    MONTHS_ORDER.forEach(month => {
+        const el = document.getElementById(`fees-modal-month-${month}`);
+        if (el) monthlyFees[month] = el.value;
+    });
 
     const saveBtn = document.getElementById('fees-modal-save-btn');
     const orig    = saveBtn.innerHTML;
@@ -1172,15 +1300,14 @@ async function handleFeesFormSubmit(event) {
     try {
         await apiRequest(`/students/${encodeURIComponent(roll)}/fees`, {
             method: 'PUT',
-            body: JSON.stringify({ feesStatus: status, feesAmount: total, feesPaid: paid })
+            body: JSON.stringify({ advanceFee, monthlyFees, feesStatus: advanceFee })
         });
 
-        // Update local store
         const student = AppStore.students.find(s => s.rollNumber === roll);
         if (student) {
-            student.feesStatus  = status;
-            student.feesAmount  = total;
-            student.feesPaid    = paid;
+            student.advanceFee  = advanceFee;
+            student.feesStatus  = advanceFee;
+            student.monthlyFees = monthlyFees;
         }
 
         closeFeesModal();
@@ -1194,9 +1321,9 @@ async function handleFeesFormSubmit(event) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // EXAM SCHEDULE MANAGEMENT MODULE (Staff/Admin)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function renderExamsTable() {
     const fStd  = document.getElementById('exams-filter-standard')?.value || 'All';
     const tbody = document.getElementById('exams-management-table')?.querySelector('tbody');
@@ -1300,9 +1427,12 @@ async function deleteExam(examId) {
 let activePerformanceFilter = "excellent";
 
 function updatePerformanceMetrics() {
+    const selectedStd = document.getElementById('performance-standard-select')?.value || 'All';
+    const students = selectedStd === 'All' ? AppStore.students : AppStore.students.filter(s => s.standard === selectedStd);
+
     let counts = { excellent: 0, improved: 0, good: 0, warning: 0, decreased: 0 };
 
-    AppStore.students.forEach(s => {
+    students.forEach(s => {
         const metrics = getStudentAveragesAndTrend(s);
         if (metrics.average >= 90) counts.excellent++;
         if (metrics.avgMonthly > metrics.avgWeekly) counts.improved++;
@@ -1340,7 +1470,10 @@ function filterPerformance(filterType) {
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    const matchedList = AppStore.students.filter(s => {
+    const selectedStd = document.getElementById('performance-standard-select')?.value || 'All';
+    const pool = selectedStd === 'All' ? AppStore.students : AppStore.students.filter(s => s.standard === selectedStd);
+
+    const matchedList = pool.filter(s => {
         const m = getStudentAveragesAndTrend(s);
         if (filterType === 'excellent' && m.average >= 90) return true;
         if (filterType === 'improved' && m.avgMonthly > m.avgWeekly) return true;
@@ -1351,7 +1484,7 @@ function filterPerformance(filterType) {
     });
 
     if (matchedList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student records matched this filter.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student records matched this filter${selectedStd !== 'All' ? ' for ' + escapeHtml(selectedStd) : ''}.</td></tr>`;
         return;
     }
 
@@ -1383,23 +1516,27 @@ function filterPerformance(filterType) {
 }
 
 function getStudentAveragesAndTrend(student) {
-    const weekly = student.marks?.weekly || { english: 0, math: 0, science: 0, history: 0 };
+    const weekly  = student.marks?.weekly  || { english: 0, math: 0, science: 0, history: 0 };
     const monthly = student.marks?.monthly || { english: 0, math: 0, science: 0, history: 0 };
 
-    const totalW = (weekly.english || 0) + (weekly.math || 0) + (weekly.science || 0) + (weekly.history || 0);
-    const totalM = (monthly.english || 0) + (monthly.math || 0) + (monthly.science || 0) + (monthly.history || 0);
+    const totalW = (weekly.english||0)  + (weekly.math||0)  + (weekly.science||0)  + (weekly.history||0);
+    const totalM = (monthly.english||0) + (monthly.math||0) + (monthly.science||0) + (monthly.history||0);
 
     const avgW = Math.round((totalW / 400) * 100);
     const avgM = Math.round((totalM / 400) * 100);
 
-    return {
-        avgWeekly: avgW,
-        avgMonthly: avgM,
-        average: Math.round((avgW + avgM) / 2)
-    };
+    return { avgWeekly: avgW, avgMonthly: avgM, average: Math.round((avgW + avgM) / 2), totalW, totalM };
 }
 
 // ------------------ 6. Rank Management Module ------------------
+function getStudentTotalMarks(s) {
+    const w = s.marks?.weekly  || { english:0, math:0, science:0, history:0 };
+    const m = s.marks?.monthly || { english:0, math:0, science:0, history:0 };
+    const wTotal = (w.english||0)+(w.math||0)+(w.science||0)+(w.history||0);
+    const mTotal = (m.english||0)+(m.math||0)+(m.science||0)+(m.history||0);
+    return wTotal + mTotal; // total out of 800
+}
+
 function loadRanksDashboard() {
     const standard = document.getElementById("ranks-standard-select")?.value;
     const tbody = document.getElementById("ranks-table")?.querySelector("tbody");
@@ -1411,43 +1548,53 @@ function loadRanksDashboard() {
 
     if (students.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No student enrollments to rank in ${escapeHtml(standard || '')}.</td></tr>`;
-        document.getElementById("ranks-top-scorer").innerText = "N/A";
+        const topEl = document.getElementById("ranks-top-scorer");
+        if (topEl) topEl.innerText = "N/A";
         return;
     }
 
-    const rankedList = students.map(s => {
-        const metrics = getStudentAveragesAndTrend(s);
-        return {
-            student: s,
-            avg: metrics.average,
-            math: s.marks?.monthly?.math || 0,
-            science: s.marks?.monthly?.science || 0
-        };
-    }).sort((a, b) => b.avg - a.avg);
+    // Build ranked list with total marks out of 800, consistent tie-breaking by name
+    const withMarks = students.map(s => {
+        const total = getStudentTotalMarks(s);
+        const pct   = Math.round((total / 800) * 100);
+        return { student: s, total, pct };
+    }).sort((a, b) => b.total !== a.total ? b.total - a.total : a.student.name.localeCompare(b.student.name));
 
-    const top = rankedList[0];
-    document.getElementById("ranks-top-scorer").innerText = `${top.student.name} (${top.avg}%)`;
+    // Assign ranks with tie handling
+    let currentRank = 1;
+    withMarks.forEach((item, idx) => {
+        if (idx > 0 && item.total === withMarks[idx - 1].total) {
+            item.rank = withMarks[idx - 1].rank; // same rank for ties
+        } else {
+            item.rank = currentRank;
+        }
+        currentRank = item.rank + 1;
+    });
 
-    rankedList.forEach((item, index) => {
-        const rankNum = index + 1;
+    const top = withMarks[0];
+    const topEl = document.getElementById("ranks-top-scorer");
+    if (topEl) topEl.innerText = `${top.student.name} (${top.pct}%)`;
+
+    withMarks.forEach(item => {
+        const rankNum = item.rank;
         let medalClass = "normal";
-        let badge = rankNum;
+        let badge = `${rankNum}`;
 
-        if (rankNum === 1) { medalClass = "gold"; badge = '<i class="fas fa-trophy"></i>'; }
+        if (rankNum === 1) { medalClass = "gold";   badge = '<i class="fas fa-trophy"></i>'; }
         else if (rankNum === 2) { medalClass = "silver"; badge = '<i class="fas fa-medal"></i>'; }
         else if (rankNum === 3) { medalClass = "bronze"; badge = '<i class="fas fa-award"></i>'; }
 
-        const grade = item.avg >= 90 ? 'A+' : item.avg >= 75 ? 'A' : item.avg >= 50 ? 'B' : 'Needs Assistance';
-        const gradeClass = item.avg >= 75 ? 'badge-success' : item.avg >= 50 ? 'badge-warning' : 'badge-danger';
+        const grade = item.pct >= 90 ? 'A+' : item.pct >= 75 ? 'A' : item.pct >= 50 ? 'B' : 'Needs Assistance';
+        const gradeClass = item.pct >= 75 ? 'badge-success' : item.pct >= 50 ? 'badge-warning' : 'badge-danger';
 
         tbody.innerHTML += `
             <tr>
                 <td><span class="rank-medal ${medalClass}">${badge}</span></td>
                 <td><strong>${escapeHtml(item.student.name)}</strong></td>
+                <td>${escapeHtml(item.student.standard)}</td>
+                <td style="font-weight:700;">${item.total}/800</td>
+                <td><span style="font-weight:800;color:var(--primary);">${item.pct}%</span></td>
                 <td><code>${escapeHtml(item.student.rollNumber)}</code></td>
-                <td>${item.math}/100</td>
-                <td>${item.science}/100</td>
-                <td><span style="font-weight: 800; color: var(--primary);">${item.avg}%</span></td>
                 <td><span class="badge ${gradeClass}">${grade}</span></td>
             </tr>
         `;
@@ -1456,73 +1603,94 @@ function loadRanksDashboard() {
 
 function getStudentRankInClass(rollNum, standard) {
     const classmates = AppStore.students.filter(s => s.standard === standard);
-    const mapped = classmates.map(s => ({
+    const sorted = classmates.map(s => ({
         roll: s.rollNumber,
-        avg: getStudentAveragesAndTrend(s).average
-    })).sort((a, b) => b.avg - a.avg);
+        total: getStudentTotalMarks(s),
+        name: s.name
+    })).sort((a, b) => b.total !== a.total ? b.total - a.total : a.name.localeCompare(b.name));
 
-    const index = mapped.findIndex(m => m.roll === rollNum);
+    // Assign ranks with ties
+    let rank = 1;
+    sorted.forEach((item, idx) => {
+        if (idx > 0 && item.total === sorted[idx - 1].total) {
+            item.rank = sorted[idx - 1].rank;
+        } else {
+            item.rank = rank;
+        }
+        rank = item.rank + 1;
+    });
+
+    const found = sorted.find(m => m.roll === rollNum);
     return {
-        rank: index !== -1 ? index + 1 : 'N/A',
+        rank: found ? found.rank : 'N/A',
         total: classmates.length
     };
 }
 
-// ------------------ 7. Timetable Management Module ------------------
+// ------------------ 7. Timetable Management Module (3 Periods: period, hour, subject) ------------------
 let isTimetableEditingActive = false;
 
-const DEFAULT_TIMETABLE_FALLBACK = [
-    { period: "Period 1 (08:30 - 09:15)", mon: "Mathematics", tue: "Science", wed: "English", thu: "History", fri: "Mathematics" },
-    { period: "Period 2 (09:20 - 10:05)", mon: "Science", tue: "Mathematics", wed: "History", thu: "English", fri: "Science" },
-    { period: "Period 3 (10:10 - 10:55)", mon: "English", tue: "History", wed: "Mathematics", thu: "Science", fri: "English" },
-    { period: "Break (10:55 - 11:30)", mon: "Break", tue: "Break", wed: "Break", thu: "Break", fri: "Break" },
-    { period: "Period 4 (11:30 - 12:15)", mon: "History", tue: "English", wed: "Science", thu: "Mathematics", fri: "Physical Ed" },
-    { period: "Period 5 (12:20 - 01:05)", mon: "Computer Sci", tue: "Computer Sci", wed: "Art & Music", thu: "Library", fri: "Assembly" }
-];
-
 function getTimetableForStandard(standard) {
-    if (AppStore.timetables && AppStore.timetables[standard]) {
+    if (AppStore.timetables && AppStore.timetables[standard] && AppStore.timetables[standard].length > 0) {
         return AppStore.timetables[standard];
     }
-    return AppStore.timetables["Default"] || DEFAULT_TIMETABLE_FALLBACK;
+    // Return empty — staff must enter timetable data via the editor
+    return [];
 }
 
 function renderTimetableGrid() {
     const standard = document.getElementById("timetable-standard-select")?.value;
-    const table = document.getElementById("timetable-editor-grid");
-    const tbody = table?.querySelector("tbody");
+    const tbody = document.getElementById("timetable-editor-grid")?.querySelector("tbody");
     if (!tbody) return;
 
     tbody.innerHTML = "";
-    const tableRows = getTimetableForStandard(standard);
+    const rows = getTimetableForStandard(standard);
 
-    tableRows.forEach((row, rowIndex) => {
-        const isBreak = row.mon === "Break";
-
-        if (isBreak) {
-            tbody.innerHTML += `
-                <tr data-row="${rowIndex}">
-                    <td><code>${escapeHtml(row.period)}</code></td>
-                    <td colspan="5" style="text-align: center; font-weight: 700; background: var(--bg-main); letter-spacing: 5px;">BREAK PERIOD</td>
+    if (rows.length === 0) {
+        if (isTimetableEditingActive) {
+            // In edit mode with no rows, show one blank row for entering data
+            tbody.innerHTML = `
+                <tr data-row="0">
+                    <td><input type="text" class="timetable-cell-edit" data-key="period" value="" placeholder="1" style="width:60px;"></td>
+                    <td><input type="text" class="timetable-cell-edit" data-key="hour" value="" placeholder="9:00 AM – 10:00 AM" style="width:160px;"></td>
+                    <td><input type="text" class="timetable-cell-edit" data-key="subject" value="" placeholder="Subject Name"></td>
                 </tr>
             `;
         } else {
-            const days = ["mon", "tue", "wed", "thu", "fri"];
-            let cellsHTML = "";
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No timetable entered yet. Click "Edit Timetable" to add periods.</td></tr>`;
+        }
+        return;
+    }
 
-            days.forEach(day => {
-                const cellVal = row[day] || "-";
-                if (isTimetableEditingActive) {
-                    cellsHTML += `<td><input type="text" class="timetable-cell-edit" data-day="${day}" value="${escapeHtml(cellVal)}"></td>`;
-                } else {
-                    cellsHTML += `<td><strong>${escapeHtml(cellVal)}</strong></td>`;
-                }
-            });
+    rows.forEach((row, rowIndex) => {
+        // Support both {period,hour,subject} (new) and legacy {period,mon,tue,...} formats
+        const isNewFormat = 'subject' in row || 'hour' in row;
 
+        if (isNewFormat) {
+            if (isTimetableEditingActive) {
+                tbody.innerHTML += `
+                    <tr data-row="${rowIndex}">
+                        <td><input type="text" class="timetable-cell-edit" data-key="period" value="${escapeHtml(row.period||'')}" style="width:60px;"></td>
+                        <td><input type="text" class="timetable-cell-edit" data-key="hour" value="${escapeHtml(row.hour||'')}" style="width:160px;"></td>
+                        <td><input type="text" class="timetable-cell-edit" data-key="subject" value="${escapeHtml(row.subject||'')}"></td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML += `
+                    <tr data-row="${rowIndex}">
+                        <td><strong>${escapeHtml(row.period||'')}</strong></td>
+                        <td>${escapeHtml(row.hour||'')}</td>
+                        <td><strong>${escapeHtml(row.subject||'-')}</strong></td>
+                    </tr>
+                `;
+            }
+        } else {
+            // Legacy format: show period + mon as hour placeholder
             tbody.innerHTML += `
                 <tr data-row="${rowIndex}">
-                    <td><code>${escapeHtml(row.period)}</code></td>
-                    ${cellsHTML}
+                    <td>${escapeHtml(row.period||'')}</td>
+                    <td>${escapeHtml(row.mon||'-')}</td>
+                    <td>${escapeHtml(row.tue||'-')}</td>
                 </tr>
             `;
         }
@@ -1530,32 +1698,34 @@ function renderTimetableGrid() {
 }
 
 async function toggleTimetableEditing() {
-    const btn = document.getElementById("timetable-toggle-edit-btn");
+    const btn    = document.getElementById("timetable-toggle-edit-btn");
     const status = document.getElementById("timetable-edit-status");
     const select = document.getElementById("timetable-standard-select");
+    const addRowContainer = document.getElementById("timetable-add-row-container");
 
     if (!isTimetableEditingActive) {
         isTimetableEditingActive = true;
         btn.innerHTML = `<i class="fas fa-floppy-disk"></i> Lock & Save`;
         btn.className = "btn btn-success";
-        status.style.display = "block";
+        if (status) status.style.display = "block";
+        if (addRowContainer) addRowContainer.style.display = "block";
         select.setAttribute("disabled", "true");
         renderTimetableGrid();
     } else {
         const standard = select.value;
         const rows = document.querySelectorAll("#timetable-editor-grid tbody tr");
-        const currentTimetable = JSON.parse(JSON.stringify(getTimetableForStandard(standard)));
+        const newTimetable = [];
 
         rows.forEach(tr => {
-            const rowIdx = parseInt(tr.getAttribute("data-row"));
-            const inputs = tr.querySelectorAll(".timetable-cell-edit");
-
-            inputs.forEach(input => {
-                const dayKey = input.getAttribute("data-day");
-                if (currentTimetable[rowIdx]) {
-                    currentTimetable[rowIdx][dayKey] = input.value.trim() || "-";
-                }
+            const rowObj = {};
+            tr.querySelectorAll(".timetable-cell-edit").forEach(input => {
+                const key = input.getAttribute("data-key") || input.getAttribute("data-day");
+                if (key) rowObj[key] = input.value.trim() || '-';
             });
+            // Only include rows that have at least a subject or period value
+            if (Object.keys(rowObj).length > 0 && (rowObj.subject !== '-' || rowObj.period !== '-')) {
+                newTimetable.push(rowObj);
+            }
         });
 
         btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
@@ -1564,26 +1734,50 @@ async function toggleTimetableEditing() {
         try {
             await apiRequest(`/timetables/${encodeURIComponent(standard)}`, {
                 method: 'PUT',
-                body: JSON.stringify(currentTimetable)
+                body: JSON.stringify(newTimetable)
             });
 
             if (!AppStore.timetables) AppStore.timetables = {};
-            AppStore.timetables[standard] = currentTimetable;
+            AppStore.timetables[standard] = newTimetable;
 
             isTimetableEditingActive = false;
             btn.innerHTML = `<i class="fas fa-edit"></i> Edit Timetable`;
             btn.className = "btn btn-primary";
             btn.disabled = false;
-            status.style.display = "none";
+            if (status) status.style.display = "none";
+            if (addRowContainer) addRowContainer.style.display = "none";
             select.removeAttribute("disabled");
             renderTimetableGrid();
-            alert(`Timetable saved successfully in MongoDB Atlas for ${standard}`);
+            alert(`Timetable saved successfully in MongoDB for ${standard}!`);
         } catch (e) {
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-floppy-disk"></i> Lock & Save`;
             alert("Error saving timetable to MongoDB: " + e.message);
         }
     }
+}
+
+function addTimetableRow() {
+    const tbody = document.getElementById("timetable-editor-grid")?.querySelector("tbody");
+    if (!tbody) return;
+
+    // Check if there's a "no timetable" placeholder row and remove it
+    const placeholderRow = tbody.querySelector('tr td[colspan]');
+    if (placeholderRow) {
+        tbody.innerHTML = '';
+    }
+
+    const existingRows = tbody.querySelectorAll("tr[data-row]");
+    const newIndex = existingRows.length;
+
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-row", newIndex);
+    tr.innerHTML = `
+        <td><input type="text" class="timetable-cell-edit" data-key="period" value="${newIndex + 1}" placeholder="${newIndex + 1}" style="width:60px;"></td>
+        <td><input type="text" class="timetable-cell-edit" data-key="hour" value="" placeholder="e.g. 9:00 AM – 10:00 AM" style="width:160px;"></td>
+        <td><input type="text" class="timetable-cell-edit" data-key="subject" value="" placeholder="Subject Name"></td>
+    `;
+    tbody.appendChild(tr);
 }
 
 function openImportTimetableModal() {
@@ -1626,6 +1820,18 @@ async function importTimetableJSON() {
 
 // ------------------ 8. Student Reviews Module ------------------
 let selectedReviewRating = 5;
+let _editingReviewId = null; // null = add mode, string = edit mode
+
+function updateReviewPercentagePreview() {
+    const marks    = parseFloat(document.getElementById('review-input-marks')?.value) || 0;
+    const maxMarks = parseFloat(document.getElementById('review-input-maxmarks')?.value) || 100;
+    const pct      = maxMarks > 0 ? Math.round((marks / maxMarks) * 100) : 0;
+    const prevEl   = document.getElementById('review-percentage-preview');
+    if (prevEl) {
+        prevEl.innerText = `${pct}%`;
+        prevEl.style.color = pct >= 75 ? 'var(--success)' : pct >= 45 ? 'var(--warning)' : 'var(--danger)';
+    }
+}
 
 function setReviewRating(rating) {
     selectedReviewRating = rating;
@@ -1647,15 +1853,49 @@ function setReviewRating(rating) {
     });
 }
 
+function cancelReviewEdit() {
+    _editingReviewId = null;
+    const titleEl = document.getElementById('review-form-title-text');
+    if (titleEl) titleEl.innerText = 'Provide Test Review';
+    document.getElementById('review-edit-id').value = '';
+    document.getElementById('review-input-testname').value = '';
+    document.getElementById('review-input-marks').value = '0';
+    document.getElementById('review-input-maxmarks').value = '100';
+    document.getElementById('review-input-comment').value = '';
+    document.getElementById('review-input-reviewer').value = 'Administrator';
+    document.getElementById('review-cancel-edit-btn').style.display = 'none';
+    document.getElementById('review-submit-btn').innerHTML = '<i class="fas fa-floppy-disk"></i> Save Review';
+    updateReviewPercentagePreview();
+    setReviewRating(5);
+}
+
+function startEditReview(reviewId, testName, marks, maxMarks, reviewer, category, rating, comment) {
+    _editingReviewId = reviewId;
+    const titleEl = document.getElementById('review-form-title-text');
+    if (titleEl) titleEl.innerText = 'Edit Test Review';
+    document.getElementById('review-edit-id').value = reviewId;
+    document.getElementById('review-input-testname').value = testName || '';
+    document.getElementById('review-input-marks').value    = marks || 0;
+    document.getElementById('review-input-maxmarks').value = maxMarks || 100;
+    document.getElementById('review-input-reviewer').value = reviewer || 'Administrator';
+    document.getElementById('review-input-category').value = category || 'Academic';
+    document.getElementById('review-input-comment').value  = comment || '';
+    document.getElementById('review-cancel-edit-btn').style.display = 'inline-flex';
+    document.getElementById('review-submit-btn').innerHTML = '<i class="fas fa-pen-to-square"></i> Update Review';
+    updateReviewPercentagePreview();
+    setReviewRating(parseInt(rating) || 5);
+}
+
 async function loadStudentReviewsInStaff() {
     const roll = document.getElementById("reviews-student-select")?.value;
     const nameDisplay = document.getElementById("reviews-student-name-display");
-    const container = document.getElementById("reviews-list-container");
+    const container   = document.getElementById("reviews-list-container");
     const summaryBlock = document.getElementById("reviews-summary-block");
     if (!container) return;
 
     if (!roll) {
-        container.innerHTML = `<p style="color: var(--text-muted);">Select a student from the dropdown above to inspect reviews.</p>`;
+        if (summaryBlock) summaryBlock.style.display = 'none';
+        container.innerHTML = `<p style="color: var(--text-muted);">Select a standard and student above to view reviews.</p>`;
         return;
     }
 
@@ -1664,17 +1904,17 @@ async function loadStudentReviewsInStaff() {
         nameDisplay.innerText = `${student.name} (${student.rollNumber})`;
     }
 
-    setReviewRating(5);
+    cancelReviewEdit();
 
     try {
         const reviews = await apiRequest(`/students/${encodeURIComponent(roll)}/reviews`);
-        renderReviewsList(container, summaryBlock, reviews);
+        renderReviewsList(container, summaryBlock, reviews, roll);
     } catch (e) {
-        container.innerHTML = `<p style="color: var(--danger);">Failed to load reviews from database: ${escapeHtml(e.message)}</p>`;
+        container.innerHTML = `<p style="color: var(--danger);">Failed to load reviews: ${escapeHtml(e.message)}</p>`;
     }
 }
 
-function renderReviewsList(container, summaryBlock, reviews) {
+function renderReviewsList(container, summaryBlock, reviews, roll) {
     if (!reviews || reviews.length === 0) {
         if (summaryBlock) summaryBlock.style.display = "none";
         container.innerHTML = `<p style="color: var(--text-muted); font-style: italic; padding: 1rem 0;">No reviews published for this student yet.</p>`;
@@ -1689,29 +1929,40 @@ function renderReviewsList(container, summaryBlock, reviews) {
         document.getElementById("reviews-total-count").innerText = `(${reviews.length} review${reviews.length === 1 ? '' : 's'})`;
     }
 
-    container.innerHTML = reviews.map(rev => `
+    container.innerHTML = reviews.map(rev => {
+        const pct = rev.maxMarks > 0 ? Math.round(((rev.marks||0) / rev.maxMarks) * 100) : (rev.percentage || 0);
+        const pctColor = pct >= 75 ? 'var(--success)' : pct >= 45 ? 'var(--warning)' : 'var(--danger)';
+        const editArgs = `'${escapeHtml(rev.id||rev._id||'')}','${escapeHtml(rev.testName||'')}',${rev.marks||0},${rev.maxMarks||100},'${escapeHtml(rev.reviewer||'Administrator')}','${escapeHtml(rev.category||'Academic')}',${rev.rating||5},'${(rev.comment||'').replace(/'/g,"&#39;")}'`;
+        return `
         <div style="background: var(--bg-main); border: 1px solid var(--border-card); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                <span style="font-weight: 700; color: var(--primary);"><i class="fas fa-user-shield"></i> ${escapeHtml(rev.reviewer || 'Administrator')}</span>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(rev.createdAt || '')}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                <div>
+                    <span style="font-weight: 800; color: var(--primary); font-size: 0.95rem;">${escapeHtml(rev.testName || 'General Review')}</span>
+                    ${rev.marks !== undefined ? `<span style="margin-left: 0.6rem; font-weight: 700; color: ${pctColor};">${rev.marks}/${rev.maxMarks||100} (${pct}%)</span>` : ''}
+                </div>
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <button class="btn btn-secondary btn-icon" onclick="startEditReview(${editArgs})" title="Edit Review" style="padding: 0.3rem 0.5rem;">
+                        <i class="fas fa-pen" style="color: var(--primary); font-size: 0.75rem;"></i>
+                    </button>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(rev.createdAt||rev.updatedAt||'')}</span>
+                </div>
             </div>
             <div style="display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.5rem;">
-                <span class="badge badge-success" style="font-size: 0.75rem;">${escapeHtml(rev.category || 'Academic')}</span>
-                <span style="font-size: 0.85rem;">${getStarsHTML(rev.rating || 5)}</span>
+                <span style="font-weight:700; color:var(--text-muted); font-size:0.8rem;"><i class="fas fa-user-shield"></i> ${escapeHtml(rev.reviewer||'Administrator')}</span>
+                <span class="badge badge-success" style="font-size: 0.7rem;">${escapeHtml(rev.category||'Academic')}</span>
+                <span style="font-size: 0.85rem;">${getStarsHTML(rev.rating||5)}</span>
             </div>
-            <p style="font-size: 0.9rem; color: var(--text-main); margin: 0; line-height: 1.4;">${escapeHtml(rev.comment)}</p>
-        </div>
-    `).join('');
+            <p style="font-size: 0.9rem; color: var(--text-main); margin: 0; line-height: 1.4; font-style: italic;">"${escapeHtml(rev.comment)}"</p>
+        </div>`;
+    }).join('');
 }
 
 function getStarsHTML(rating) {
     let stars = "";
     for (let i = 1; i <= 5; i++) {
-        if (i <= rating) {
-            stars += `<i class="fa-solid fa-star" style="color: var(--warning);"></i>`;
-        } else {
-            stars += `<i class="fa-regular fa-star" style="color: var(--text-muted);"></i>`;
-        }
+        stars += i <= rating
+            ? `<i class="fa-solid fa-star" style="color: var(--warning);"></i>`
+            : `<i class="fa-regular fa-star" style="color: var(--text-muted);"></i>`;
     }
     return stars;
 }
@@ -1719,32 +1970,38 @@ function getStarsHTML(rating) {
 async function handleReviewFormSubmit(event) {
     event.preventDefault();
     const roll = document.getElementById("reviews-student-select")?.value;
-    if (!roll) {
-        alert("Please select a student first.");
-        return;
-    }
+    if (!roll) { alert("Please select a student first."); return; }
 
+    const testName = document.getElementById('review-input-testname')?.value.trim() || '';
+    const marks    = parseFloat(document.getElementById('review-input-marks')?.value) || 0;
+    const maxMarks = parseFloat(document.getElementById('review-input-maxmarks')?.value) || 100;
     const reviewer = document.getElementById("review-input-reviewer").value.trim();
     const category = document.getElementById("review-input-category").value;
-    const comment = document.getElementById("review-input-comment").value.trim();
+    const comment  = document.getElementById("review-input-comment").value.trim();
+    const editId   = document.getElementById('review-edit-id')?.value.trim();
+
+    const payload = { testName, marks, maxMarks, reviewer, category, rating: selectedReviewRating, comment };
 
     try {
-        await apiRequest(`/students/${encodeURIComponent(roll)}/reviews`, {
-            method: 'POST',
-            body: JSON.stringify({
-                reviewer: reviewer,
-                category: category,
-                rating: selectedReviewRating,
-                comment: comment
-            })
-        });
+        if (editId) {
+            // Edit existing review
+            await apiRequest(`/students/${encodeURIComponent(roll)}/reviews/${encodeURIComponent(editId)}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+        } else {
+            // Add new review
+            await apiRequest(`/students/${encodeURIComponent(roll)}/reviews`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
 
-        document.getElementById("review-input-comment").value = "";
-        await refreshStudentsFromAPI();
-        loadStudentReviewsInStaff();
-        alert("Review published successfully to MongoDB Atlas!");
+        cancelReviewEdit();
+        await loadStudentReviewsInStaff();
+        alert(editId ? "Review updated successfully!" : "Review saved to MongoDB!");
     } catch (e) {
-        alert("Error publishing review: " + e.message);
+        alert("Error saving review: " + e.message);
     }
 }
 
@@ -1805,9 +2062,16 @@ async function loadStudentPortal() {
     if (avgCard) avgCard.innerText = `${metrics.average}%`;
 
     // 3. Class Rank
-    const rankDetails = getStudentRankInClass(roll, student.standard);
     const rankCard = document.getElementById("stud-card-rank");
-    if (rankCard) rankCard.innerText = `${rankDetails.rank} / ${rankDetails.total}`;
+    if (rankCard) {
+        try {
+            const rankRes = await apiRequest(`/students/${encodeURIComponent(roll)}/rank`);
+            rankCard.innerText = `${rankRes.rank} / ${rankRes.total}`;
+        } catch (e) {
+            const rankDetails = getStudentRankInClass(roll, student.standard);
+            rankCard.innerText = `${rankDetails.rank} / ${rankDetails.total}`;
+        }
+    }
 
     // Tab-Specific Renderers
     if (activeStudentTab === 'overview') {
@@ -1889,64 +2153,64 @@ async function loadStudentPortal() {
         if (tbody) {
             tbody.innerHTML = "";
             const rows = getTimetableForStandard(student.standard);
-            rows.forEach(r => {
-                const isB = r.mon === 'Break';
-                if (isB) {
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:1.5rem;">No timetable has been published for your class yet.</td></tr>`;
+            } else {
+                rows.forEach(r => {
                     tbody.innerHTML += `
                         <tr>
-                            <td><code>${escapeHtml(r.period)}</code></td>
-                            <td colspan="5" style="text-align: center; font-weight: 700; background: var(--bg-main); letter-spacing: 5px;">BREAK</td>
+                            <td><strong>${escapeHtml(r.period || '')}</strong></td>
+                            <td>${escapeHtml(r.hour || r.mon || '')}</td>
+                            <td><strong style="color: var(--primary);">${escapeHtml(r.subject || r.tue || '-')}</strong></td>
                         </tr>
                     `;
-                } else {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><code>${escapeHtml(r.period)}</code></td>
-                            <td><strong>${escapeHtml(r.mon || '-')}</strong></td>
-                            <td><strong>${escapeHtml(r.tue || '-')}</strong></td>
-                            <td><strong>${escapeHtml(r.wed || '-')}</strong></td>
-                            <td><strong>${escapeHtml(r.thu || '-')}</strong></td>
-                            <td><strong>${escapeHtml(r.fri || '-')}</strong></td>
-                        </tr>
-                    `;
-                }
-            });
+                });
+            }
         }
 
     } else if (activeStudentTab === 'fees') {
-        // Student views their own fees status
+        // Student views their own fees status (Advance Fee & Monthly Fee only)
         const feesCont = document.getElementById('stud-fees-content');
         if (feesCont) {
-            const fStatus  = student.feesStatus  || 'Paid';
-            const fTotal   = student.feesAmount   || 0;
-            const fPaid    = student.feesPaid     || 0;
-            const fBalance = Math.max(0, fTotal - fPaid);
-            const badgeCls = fStatus === 'Paid' ? 'badge-success' : fStatus === 'Partially Paid' ? 'badge-warning' : 'badge-danger';
+            const advFee = student.advanceFee || student.feesStatus || 'Not Paid';
+            const advBadgeCls = advFee === 'Paid' ? 'badge-success' : 'badge-danger';
+            const mf = student.monthlyFees || {};
+
+            const monthCards = MONTHS_ORDER.map(m => {
+                const status = mf[m] || 'Not Paid';
+                const cls = status === 'Paid' ? 'badge-success' : 'badge-danger';
+                return `
+                    <div style="background: var(--bg-card); padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); text-align: center;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 0.4rem;">${MONTHS_LABELS[m]}</span>
+                        <span class="badge ${cls}" style="font-size: 0.85rem; padding: 0.3rem 0.6rem;">${escapeHtml(status)}</span>
+                    </div>
+                `;
+            }).join('');
 
             feesCont.innerHTML = `
-                <div class="glass" style="padding: 2rem; border-radius: var(--radius-lg); max-width: 600px;">
-                    <h4 style="font-weight:800; font-size:1.1rem; color:var(--primary); margin-bottom:1.5rem;">
-                        <i class="fas fa-receipt"></i> Fee Details for ${escapeHtml(student.name)}
+                <div class="glass" style="padding: 2rem; border-radius: var(--radius-lg); max-width: 750px;">
+                    <h4 style="font-weight:800; font-size:1.15rem; color:var(--primary); margin-bottom:1.5rem;">
+                        <i class="fas fa-receipt"></i> Fee Status for ${escapeHtml(student.name)}
                     </h4>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+                    
+                    <!-- Advance Fee Card -->
+                    <div style="background: var(--bg-main); padding: 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <label style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Total Fee</label>
-                            <span style="font-size:1.4rem;font-weight:800;color:var(--text-main);">&#8377;${fTotal.toLocaleString('en-IN')}</span>
+                            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.2rem;">1. Advance Fee</div>
+                            <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main);">Tuition Admission & Advance Deposit</div>
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Amount Paid</label>
-                            <span style="font-size:1.4rem;font-weight:800;color:var(--success);">&#8377;${fPaid.toLocaleString('en-IN')}</span>
+                        <span class="badge ${advBadgeCls}" style="font-size: 1rem; padding: 0.4rem 1rem;">${escapeHtml(advFee)}</span>
+                    </div>
+
+                    <!-- Monthly Fees Grid -->
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+                            <i class="fas fa-calendar-days"></i> 2. Monthly Tuition Fees (Academic Year June â€“ May)
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Balance Due</label>
-                            <span style="font-size:1.4rem;font-weight:800;color:${fBalance > 0 ? 'var(--danger)' : 'var(--success)'};">&#8377;${fBalance.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div>
-                            <label style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Status</label>
-                            <span class="badge ${badgeCls}" style="font-size:1rem;padding:0.4rem 0.8rem;">${escapeHtml(fStatus)}</span>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.8rem;">
+                            ${monthCards}
                         </div>
                     </div>
-                    ${fBalance > 0 ? `<div style="background:rgba(var(--danger-rgb,220,53,69),0.08);border-left:4px solid var(--danger);padding:1rem;border-radius:6px;"><i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i> <strong>Outstanding balance of &#8377;${fBalance.toLocaleString('en-IN')} is due.</strong> Please contact the school office to clear your fees.</div>` : `<div style="background:rgba(var(--success-rgb,40,167,69),0.08);border-left:4px solid var(--success);padding:1rem;border-radius:6px;"><i class="fas fa-circle-check" style="color:var(--success);"></i> <strong>All fees are fully paid.</strong> Your account is up to date.</div>`}
                 </div>
             `;
         }
@@ -1982,7 +2246,7 @@ async function loadStudentPortal() {
 
     } else if (activeStudentTab === 'profile') {
         document.getElementById("stud-profile-full-name").innerText = student.name;
-        document.getElementById("stud-profile-subtitle").innerText = `Roll Number: ${student.rollNumber} • Class: ${student.standard}`;
+        document.getElementById("stud-profile-subtitle").innerText = `Roll Number: ${student.rollNumber} â€¢ Class: ${student.standard}`;
         document.getElementById("stud-profile-standard").innerText = student.standard;
         document.getElementById("stud-profile-section").innerText = `Section ${student.section || 'A'}`;
         document.getElementById("stud-profile-group").innerText = student.group || 'General';
@@ -1991,9 +2255,9 @@ async function loadStudentPortal() {
 
         const feeBadge = document.getElementById("stud-profile-fees");
         if (feeBadge) {
-            const fStatus = student.feesStatus || "Paid";
-            feeBadge.innerText = fStatus;
-            feeBadge.className = "badge " + (fStatus === "Paid" ? "badge-success" : fStatus === "Partially Paid" ? "badge-warning" : "badge-danger");
+            const advStatus = student.advanceFee || student.feesStatus || "Not Paid";
+            feeBadge.innerText = `Advance: ${advStatus}`;
+            feeBadge.className = "badge " + (advStatus === "Paid" ? "badge-success" : "badge-danger");
         }
 
     } else if (activeStudentTab === 'reviews') {

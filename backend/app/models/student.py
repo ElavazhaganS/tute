@@ -51,14 +51,18 @@ class StudentBase(BaseModel):
     gender: Optional[str] = "Male"
     standard: str = Field(..., min_length=1)
     section: str = "A"
-    group: str = "General"
+    group: str = "General"  # "General", "Science Group", "Computer Group", "Arts Group", "Commerce Group"
     admissionDate: Optional[str] = ""
     email: Optional[str] = ""
     phone: Optional[str] = ""
     address: Optional[str] = ""
-    feesStatus: str = "Paid"  # "Paid" | "Pending" | "Partially Paid"
+    feesStatus: str = "Pending"  # "Paid" | "Pending" | "Partially Paid"
     feesAmount: float = 25000.0
-    feesPaid: float = 25000.0
+    feesPaid: float = 0.0
+    advanceFee: str = "Not Paid"  # "Paid" | "Not Paid"
+    monthlyFees: Dict[str, str] = Field(default_factory=lambda: {
+        m: "Not Paid" for m in ["june", "july", "august", "september", "october", "november", "december", "january", "february", "march", "april", "may"]
+    })
     performanceComment: Optional[str] = "Enrolled recently."
     parent: Optional[ParentDetails] = Field(default_factory=ParentDetails)
 
@@ -97,6 +101,8 @@ class StudentUpdate(BaseModel):
     feesStatus: Optional[str] = None
     feesAmount: Optional[float] = None
     feesPaid: Optional[float] = None
+    advanceFee: Optional[str] = None
+    monthlyFees: Optional[Dict[str, str]] = None
     performanceComment: Optional[str] = None
     parent: Optional[ParentDetails] = None
 
@@ -115,7 +121,7 @@ class StudentUpdate(BaseModel):
         return validate_email_str(v)
 
 class StudentResponse(StudentBase):
-    marks: StudentMarks = Field(default_factory=StudentMarks)
+    marks: Dict[str, Any] = Field(default_factory=dict)
     attendance: Dict[str, str] = Field(default_factory=dict)
     reviews: List[ReviewItem] = Field(default_factory=list)
 
@@ -126,14 +132,21 @@ class StudentMutationResponse(BaseModel):
 
 class AttendanceUpdate(BaseModel):
     rollNumber: str
+    studentId: Optional[str] = ""
+    standard: Optional[str] = ""
     date: str  # YYYY-MM-DD
     status: Optional[str] = None  # 'P' | 'A' | None (to remove)
 
 class MarksUpdate(BaseModel):
-    testType: str  # 'weekly' | 'monthly'
-    marks: SubjectMarks
+    testType: str  # 'weekly' | 'monthly' or any test name
+    marks: Optional[SubjectMarks] = None
+    scores: Optional[Dict[str, Any]] = None
 
 class FeesUpdate(BaseModel):
-    feesStatus: str  # "Paid" | "Pending" | "Partially Paid"
+    feesStatus: Optional[str] = None  # "Paid" | "Pending" | "Partially Paid"
     feesAmount: Optional[float] = None
     feesPaid: Optional[float] = None
+    advanceFee: Optional[str] = None  # "Paid" | "Not Paid"
+    monthlyFees: Optional[Dict[str, str]] = None
+    month: Optional[str] = None
+    monthStatus: Optional[str] = None

@@ -137,29 +137,63 @@ async def run_test():
         assert res.status_code == 200
         print("   Marks Update OK")
 
-        print("9. Testing Fees Update Endpoint...")
+        print("9. Testing Fees Update Endpoint (Advance Fee & Monthly Fees)...")
         res = await ac.put(f"/api/students/{test_roll}/fees", json={
-            "feesStatus": "Paid",
-            "feesAmount": 25000,
-            "feesPaid": 25000
+            "advanceFee": "Paid",
+            "month": "September",
+            "monthStatus": "Paid"
         }, headers=headers_admin)
         assert res.status_code == 200
-        print("   Fees Update OK")
+        # Check student fee update
+        res_stud = await ac.get(f"/api/students/{test_roll}")
+        stud_data = res_stud.json()
+        assert stud_data.get("advanceFee") == "Paid"
+        assert stud_data.get("monthlyFees", {}).get("September") == "Paid"
+        print("   Fees Update (Advance & Monthly Fee) OK")
 
-        print("10. Testing Student Reviews...")
-        res = await ac.post(f"/api/students/{test_roll}/reviews", json={
+        print("10. Testing Student Reviews (Add, Edit, and Percentage)...")
+        res_rev = await ac.post(f"/api/students/{test_roll}/reviews", json={
             "reviewer": "Principal",
+            "testName": "Unit Test 1",
+            "marks": 95,
+            "maxMarks": 100,
             "category": "Academic",
             "rating": 5,
             "comment": "Outstanding test results across all modules."
         }, headers=headers_admin)
-        assert res.status_code == 200 and res.json()["rating"] == 5
-        print("   Reviews OK")
+        assert res_rev.status_code == 200
+        rev_json = res_rev.json()
+        assert rev_json["percentage"] == 95.0
+        assert rev_json["testName"] == "Unit Test 1"
+        rev_id = rev_json["id"]
 
-        print("11. Testing Timetable Retrieval & Update...")
-        res = await ac.get("/api/timetables/10th Standard")
-        assert res.status_code == 200
-        print("   Timetable OK")
+        # Test Editing Review
+        res_rev_up = await ac.put(f"/api/students/{test_roll}/reviews/{rev_id}", json={
+            "comment": "Updated comment: Exceptional analytical aptitude in Mathematics.",
+            "marks": 98,
+            "rating": 5
+        }, headers=headers_admin)
+        assert res_rev_up.status_code == 200
+        rev_up_json = res_rev_up.json()
+        assert rev_up_json["percentage"] == 98.0
+        assert "Exceptional" in rev_up_json["comment"]
+        print("   Reviews (Add, Edit, Save) OK")
+
+        print("11. Testing Timetable 3 Periods (Period, Hour, Subject)...")
+        res_tt = await ac.get("/api/timetables/10th Standard")
+        assert res_tt.status_code == 200
+        tt_list = res_tt.json()
+        assert len(tt_list) == 3, f"Expected exactly 3 periods, got {len(tt_list)}"
+        assert "hour" in tt_list[0] and "subject" in tt_list[0]
+        # Test editing timetable
+        updated_tt = [
+            {"period": "1", "hour": "9:00 AM – 10:00 AM", "subject": "Advanced Mathematics"},
+            {"period": "2", "hour": "10:00 AM – 11:00 AM", "subject": "General Science"},
+            {"period": "3", "hour": "11:15 AM – 12:15 PM", "subject": "Computer Science"}
+        ]
+        res_tt_save = await ac.put("/api/timetables/10th Standard", json=updated_tt)
+        assert res_tt_save.status_code == 200
+        print("   Timetable 3 Periods & Editable Hour/Subject OK")
 
         print("12. Testing Exam Schedule Creation & Retrieval...")
         exam_data = {

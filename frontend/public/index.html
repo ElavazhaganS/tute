@@ -135,7 +135,7 @@
                             <label for="student-roll">Roll Number</label>
                             <div class="input-wrapper">
                                 <i class="fas fa-id-badge"></i>
-                                <input type="text" id="student-roll" placeholder="Enter roll number (e.g. 1001)" required>
+                                <input type="text" id="student-roll" placeholder="Enter your roll number" required>
                             </div>
                         </div>
                         <div class="form-group">
@@ -254,12 +254,22 @@
                                 </select>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-fees">Fees:</label>
+                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-stream">Stream:</label>
+                                <select id="student-filter-stream" onchange="renderStudentsTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                    <option value="All">All Streams</option>
+                                    <option value="General">General</option>
+                                    <option value="Science Group">Science Group</option>
+                                    <option value="Computer Group">Computer Group</option>
+                                    <option value="Arts Group">Arts Group</option>
+                                    <option value="Commerce Group">Commerce Group</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="font-weight: 700; font-size: 0.85rem;" for="student-filter-fees">Advance Fee:</label>
                                 <select id="student-filter-fees" onchange="renderStudentsTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
                                     <option value="All">All Statuses</option>
                                     <option value="Paid">Paid</option>
-                                    <option value="Partially Paid">Partially Paid</option>
-                                    <option value="Pending">Pending</option>
+                                    <option value="Not Paid">Not Paid</option>
                                 </select>
                             </div>
                         </div>
@@ -285,26 +295,26 @@
                         </div>
                     </div>
 
-                    <!-- 7. Attendance Management Module -->
+                    <!-- 7. Attendance Management Module (Standard-Wise + Date Filter) -->
                     <div id="sec-attendance" class="dashboard-section">
                         <div class="section-header">
                             <h3><i class="fas fa-calendar-days"></i> Attendance Manager</h3>
                         </div>
 
-                        <div class="attendance-calendar-bar">
-                            <div class="date-picker-container">
-                                <label for="attendance-date-select">Select Date:</label>
-                                <input type="date" id="attendance-date-select" onchange="loadAttendanceForSelectedDate()">
-                            </div>
-                            <div style="display: none; gap: 0.8rem; align-items: center;">
-                                <label for="attendance-standard-select" style="font-weight: 700;">Standard:</label>
-                                <select id="attendance-standard-select" onchange="loadAttendanceForSelectedDate()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                        <div class="attendance-calendar-bar" style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 0.6rem; align-items: center;">
+                                <label for="attendance-standard-select" style="font-weight: 700;"><i class="fas fa-layer-group"></i> Select Standard:</label>
+                                <select id="attendance-standard-select" onchange="loadAttendanceForSelectedDate()" style="padding: 0.5rem 1.2rem 0.5rem 0.8rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
                                     <!-- Injected dynamically -->
                                 </select>
                             </div>
+                            <div class="date-picker-container" style="display: flex; gap: 0.6rem; align-items: center;">
+                                <label for="attendance-date-select" style="font-weight: 700;"><i class="fas fa-calendar-day"></i> Select Date:</label>
+                                <input type="date" id="attendance-date-select" onchange="loadAttendanceForSelectedDate()" style="padding: 0.5rem 0.8rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                            </div>
                         </div>
 
-                        <!-- Statistics specific to selected date -->
+                        <!-- Statistics specific to selected standard and date -->
                         <div class="stats-grid" style="margin-bottom: 1.5rem; grid-template-columns: repeat(3, 1fr);">
                             <div class="stat-card glass" style="padding: 1.2rem; border-left-width: 4px;">
                                 <div class="stat-info">
@@ -334,41 +344,50 @@
                                 <thead>
                                     <tr>
                                         <th>Roll Number</th>
-                                        <th>Name</th>
+                                        <th>Student ID</th>
+                                        <th>Student Name</th>
                                         <th>Standard</th>
-                                        <th>Status (Toggle to update)</th>
+                                        <th>Status (Present / Absent)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Dynamic marking rows -->
+                                    <!-- Dynamic marking rows standard-wise -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <!-- 8. Marks Management Module -->
+                    <!-- 8. Marks Management Module (Add Marks Flow) -->
                     <div id="sec-marks" class="dashboard-section">
                         <div class="section-header">
                             <h3><i class="fas fa-book-bookmark"></i> Test Marks Management</h3>
-                            <button class="btn btn-success" onclick="saveActiveMarks()">
-                                <i class="fas fa-floppy-disk"></i> Save All Marks
-                            </button>
+                            <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+                                <button class="btn btn-secondary" id="btn-add-marks-action" onclick="activateAddMarksFlow()">
+                                    <i class="fas fa-plus"></i> Add Marks
+                                </button>
+                                <button class="btn btn-success" onclick="saveActiveMarks()">
+                                    <i class="fas fa-floppy-disk"></i> Save / Update Marks
+                                </button>
+                            </div>
                         </div>
 
                         <div class="attendance-calendar-bar">
-                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap;">
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <label style="font-weight: 700;" for="marks-test-type">Test Type:</label>
-                                    <select id="marks-test-type" onchange="loadMarksTable()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
-                                        <option value="weekly">Weekly Test</option>
-                                        <option value="monthly">Monthly Test</option>
+                                    <label style="font-weight: 700;" for="marks-standard-select"><i class="fas fa-layer-group"></i> 1. Standard:</label>
+                                    <select id="marks-standard-select" onchange="onMarksStandardOrTestChange()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                        <!-- Injected dynamically -->
                                     </select>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <label style="font-weight: 700;" for="marks-standard-select">Standard:</label>
-                                    <select id="marks-standard-select" onchange="loadMarksTable()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
-                                        <!-- Injected dynamically -->
+                                    <label style="font-weight: 700;" for="marks-test-type"><i class="fas fa-file-pen"></i> 2. Select Test:</label>
+                                    <select id="marks-test-type" onchange="onMarksStandardOrTestChange()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                        <option value="weekly">Weekly Test</option>
+                                        <option value="monthly">Monthly Test</option>
                                     </select>
+                                    <button class="btn btn-sm btn-secondary" onclick="promptNewTestName()" title="Add Custom Test Name" style="padding: 0.4rem 0.7rem; font-size: 0.8rem;">
+                                        <i class="fas fa-plus"></i> New Test
+                                    </button>
                                 </div>
                             </div>
                             <div style="font-weight: 700; color: var(--text-muted);">
@@ -381,6 +400,7 @@
                                 <thead>
                                     <tr>
                                         <th>Roll Number</th>
+                                        <th>Student ID</th>
                                         <th>Name</th>
                                         <th>English (100)</th>
                                         <th>Mathematics (100)</th>
@@ -397,10 +417,19 @@
                         </div>
                     </div>
 
-                    <!-- 9. Performance Analysis Module -->
+                    <!-- 9. Performance Analysis Module (Standard-Wise) -->
                     <div id="sec-performance" class="dashboard-section">
                         <div class="section-header">
                             <h3><i class="fas fa-chart-pie"></i> Performance Analysis</h3>
+                        </div>
+
+                        <div class="attendance-calendar-bar" style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; gap: 0.8rem; align-items: center;">
+                                <label for="performance-standard-select" style="font-weight: 700;"><i class="fas fa-layer-group"></i> Select Standard:</label>
+                                <select id="performance-standard-select" onchange="updatePerformanceMetrics()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                    <!-- Injected dynamically -->
+                                </select>
+                            </div>
                         </div>
 
                         <div class="performance-analysis-grid">
@@ -459,7 +488,7 @@
                         </div>
                     </div>
 
-                    <!-- 10. Rank Management Module -->
+                    <!-- 10. Rank Management Module (Standard-Wise) -->
                     <div id="sec-ranks" class="dashboard-section">
                         <div class="section-header">
                             <h3><i class="fas fa-trophy"></i> Rank Management</h3>
@@ -467,8 +496,8 @@
 
                         <div class="attendance-calendar-bar" style="margin-bottom: 2rem;">
                             <div style="display: flex; gap: 0.8rem; align-items: center;">
-                                <label for="ranks-standard-select" style="font-weight: 700;">Standard Select:</label>
-                                <select id="ranks-standard-select" onchange="loadRanksDashboard()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                <label for="ranks-standard-select" style="font-weight: 700;"><i class="fas fa-layer-group"></i> Select Standard:</label>
+                                <select id="ranks-standard-select" onchange="loadRanksDashboard()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
                                     <!-- Injected -->
                                 </select>
                             </div>
@@ -482,16 +511,16 @@
                                 <thead>
                                     <tr>
                                         <th>Rank</th>
-                                        <th>Name</th>
+                                        <th>Student Name</th>
+                                        <th>Standard</th>
+                                        <th>Total Marks</th>
+                                        <th>Percentage</th>
                                         <th>Roll Number</th>
-                                        <th>Mathematics</th>
-                                        <th>Science</th>
-                                        <th>Average Score</th>
                                         <th>Grade</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Ranks rows sorted descending -->
+                                    <!-- Standard-wise ranks sorted descending -->
                                 </tbody>
                             </table>
                         </div>
@@ -499,7 +528,7 @@
 
 
 
-                    <!-- 11. Fees Management Module -->
+                    <!-- 11. Fees Management Module (Advance Fee & Monthly Fee Only) -->
                     <div id="sec-fees" class="dashboard-section">
                         <div class="section-header">
                             <h3><i class="fas fa-indian-rupee-sign"></i> Fees Management</h3>
@@ -513,34 +542,33 @@
                                     <input type="text" id="fees-search-query" oninput="renderFeesTable()" placeholder="Search by student name or roll number...">
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-status">Status:</label>
-                                    <select id="fees-filter-status" onchange="renderFeesTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
-                                        <option value="All">All Statuses</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Partially Paid">Partially Paid</option>
-                                        <option value="Pending">Pending</option>
+                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-standard">Standard:</label>
+                                    <select id="fees-filter-standard" onchange="renderFeesTable()" style="padding: 0.5rem 1.2rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                        <option value="All">All Standards</option>
                                     </select>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-standard">Standard:</label>
-                                    <select id="fees-filter-standard" onchange="renderFeesTable()" style="padding: 0.5rem 1.5rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
-                                        <option value="All">All Standards</option>
+                                    <label style="font-weight: 700; font-size: 0.85rem;" for="fees-filter-advance">Advance Fee:</label>
+                                    <select id="fees-filter-advance" onchange="renderFeesTable()" style="padding: 0.5rem 1.2rem 0.5rem 0.8rem; width: auto; font-weight: 600; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);">
+                                        <option value="All">All Statuses</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Not Paid">Not Paid</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Fee Summary Stats -->
+                            <!-- Fee Summary Stats (Advance Fee & Monthly Tracker) -->
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.2rem;">
+                                <div class="stat-card glass" style="padding: 1.2rem;">
+                                    <div class="stat-info"><h4>Total Enrollments</h4><div class="stat-value" id="fees-stat-total">0</div></div>
+                                    <i class="fas fa-users stat-icon" style="font-size: 1.6rem;"></i>
+                                </div>
                                 <div class="stat-card success glass" style="padding: 1.2rem;">
-                                    <div class="stat-info"><h4>Fees Paid</h4><div class="stat-value" id="fees-stat-paid">0</div></div>
+                                    <div class="stat-info"><h4>Advance Fee Paid</h4><div class="stat-value" id="fees-stat-paid">0</div></div>
                                     <i class="fas fa-circle-check stat-icon" style="font-size: 1.6rem;"></i>
                                 </div>
-                                <div class="stat-card warning glass" style="padding: 1.2rem;">
-                                    <div class="stat-info"><h4>Partially Paid</h4><div class="stat-value" id="fees-stat-partial">0</div></div>
-                                    <i class="fas fa-circle-half-stroke stat-icon" style="font-size: 1.6rem;"></i>
-                                </div>
                                 <div class="stat-card danger glass" style="padding: 1.2rem;">
-                                    <div class="stat-info"><h4>Fees Pending</h4><div class="stat-value" id="fees-stat-pending">0</div></div>
+                                    <div class="stat-info"><h4>Advance Fee Pending</h4><div class="stat-value" id="fees-stat-pending">0</div></div>
                                     <i class="fas fa-circle-xmark stat-icon" style="font-size: 1.6rem;"></i>
                                 </div>
                             </div>
@@ -553,53 +581,64 @@
                                         <th>Student</th>
                                         <th>Roll No</th>
                                         <th>Standard</th>
-                                        <th>Total Fee (₹)</th>
-                                        <th>Amount Paid (₹)</th>
-                                        <th>Balance (₹)</th>
-                                        <th>Status</th>
+                                        <th>Advance Fee</th>
+                                        <th>June</th>
+                                        <th>July</th>
+                                        <th>August</th>
+                                        <th>September</th>
+                                        <th>October</th>
+                                        <th>November</th>
+                                        <th>December</th>
+                                        <th>January</th>
+                                        <th>February</th>
+                                        <th>March</th>
+                                        <th>April</th>
+                                        <th>May</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Injected dynamically -->
+                                    <!-- Injected dynamically month-wise -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    <!-- FEES EDIT MODAL (inline) -->
+                    <!-- FEES EDIT MODAL (Advance Fee + Month-Wise Fees) -->
                     <div class="modal" id="fees-edit-modal">
-                        <div class="modal-content" style="max-width: 520px;">
+                        <div class="modal-content modal-lg" style="max-width: 650px;">
                             <div class="modal-header">
                                 <h3><i class="fas fa-indian-rupee-sign"></i> Update Fees — <span id="fees-modal-student-name">Student</span></h3>
                                 <button class="modal-close-btn" onclick="closeFeesModal()">&times;</button>
                             </div>
                             <form onsubmit="handleFeesFormSubmit(event)">
                                 <input type="hidden" id="fees-modal-roll">
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label for="fees-modal-status">Fees Status</label>
-                                        <select id="fees-modal-status" style="padding-left: 1rem; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                                    <!-- 1. Advance Fee -->
+                                    <div class="form-group" style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); margin-bottom: 1.5rem;">
+                                        <label for="fees-modal-advance" style="font-weight: 800; font-size: 0.95rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fas fa-shield-halved"></i> 1. Advance Fee Status *
+                                        </label>
+                                        <select id="fees-modal-advance" style="padding-left: 1rem; background: var(--bg-card); color: var(--text-main); font-weight: 700; width: 100%;">
                                             <option value="Paid">Paid</option>
-                                            <option value="Partially Paid">Partially Paid</option>
-                                            <option value="Pending">Pending</option>
+                                            <option value="Not Paid">Not Paid</option>
                                         </select>
                                     </div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                        <div class="form-group">
-                                            <label for="fees-modal-total">Total Fee Amount (₹)</label>
-                                            <input type="number" id="fees-modal-total" min="0" style="padding-left: 1rem;">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="fees-modal-paid">Amount Paid (₹)</label>
-                                            <input type="number" id="fees-modal-paid" min="0" style="padding-left: 1rem;">
+
+                                    <!-- 2. Monthly Fee (Month-Wise) -->
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="font-weight: 800; font-size: 0.95rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                                            <i class="fas fa-calendar-days"></i> 2. Monthly Fee Status (Month-Wise)
+                                        </label>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.8rem;" id="fees-modal-months-container">
+                                            <!-- Dynamically populated month dropdowns (June to May) -->
                                         </div>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" onclick="closeFeesModal()">Cancel</button>
                                     <button type="submit" class="btn btn-success" id="fees-modal-save-btn">
-                                        <i class="fas fa-floppy-disk"></i> Save Fees
+                                        <i class="fas fa-floppy-disk"></i> Save Fees to Database
                                     </button>
                                 </div>
                             </form>
@@ -697,10 +736,10 @@
                         </div>
                     </div>
 
-                    <!-- 12. Timetable Management Module -->
+                    <!-- 12. Timetable Management Module (3 Editable Periods) -->
                     <div id="sec-timetable" class="dashboard-section">
                         <div class="section-header">
-                            <h3><i class="fas fa-table-cells"></i> Timetable Editor</h3>
+                            <h3><i class="fas fa-table-cells"></i> Timetable Editor (3 Periods)</h3>
                             <div style="display: flex; gap: 0.6rem;">
                                 <button class="btn btn-secondary" onclick="openImportTimetableModal()">
                                     <i class="fas fa-cloud-upload-alt"></i> Import JSON
@@ -713,13 +752,13 @@
 
                         <div class="attendance-calendar-bar">
                             <div style="display: flex; gap: 0.8rem; align-items: center;">
-                                <label for="timetable-standard-select" style="font-weight: 700;">Standard Select:</label>
-                                <select id="timetable-standard-select" onchange="renderTimetableGrid()" style="padding: 0.5rem; border: 1px solid var(--border-card);">
+                                <label for="timetable-standard-select" style="font-weight: 700;"><i class="fas fa-layer-group"></i> Select Standard:</label>
+                                <select id="timetable-standard-select" onchange="renderTimetableGrid()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
                                     <!-- Injected -->
                                 </select>
                             </div>
                             <div id="timetable-edit-status" style="font-weight: 700; font-size: 0.9rem; color: var(--success); display: none;">
-                                <i class="fas fa-circle-dot"></i> Live Editing Active
+                                <i class="fas fa-circle-dot"></i> Live Editing Active — modify Hour & Subject below then click Save
                             </div>
                         </div>
 
@@ -727,33 +766,41 @@
                             <table id="timetable-editor-grid">
                                 <thead>
                                     <tr>
-                                        <th>Timing Period</th>
-                                        <th>Monday</th>
-                                        <th>Tuesday</th>
-                                        <th>Wednesday</th>
-                                        <th>Thursday</th>
-                                        <th>Friday</th>
+                                        <th style="width: 15%;">Period</th>
+                                        <th style="width: 40%;">Hour / Timing Window</th>
+                                        <th style="width: 45%;">Subject</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Calendar periods -->
+                                    <!-- Periods (Period, Hour, Subject) for selected standard -->
                                 </tbody>
                             </table>
+                            <div id="timetable-add-row-container" style="display:none; margin-top:0.8rem;">
+                                <button type="button" class="btn btn-secondary" onclick="addTimetableRow()">
+                                    <i class="fas fa-plus"></i> Add Period Row
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Student Reviews Module -->
+                    <!-- Student Reviews Module (Test-Wise Reviews with Add/Edit/Save) -->
                     <div id="sec-reviews" class="dashboard-section">
                         <div class="section-header">
-                            <h3><i class="fas fa-star-half-stroke"></i> Student Reviews Registry</h3>
+                            <h3><i class="fas fa-star-half-stroke"></i> Student Test Reviews Registry</h3>
                         </div>
-                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Submit and view academic, behavioral, and overall performance reviews for students.</p>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Provide and manage test-wise reviews and comments for each student with marks and percentage.</p>
 
-                        <div class="attendance-calendar-bar" style="margin-bottom: 2rem;">
-                            <div style="display: flex; gap: 0.8rem; align-items: center; flex: 1; min-width: 250px;">
-                                <label for="reviews-student-select" style="font-weight: 700;">Select Student:</label>
-                                <select id="reviews-student-select" onchange="loadStudentReviewsInStaff()" style="padding: 0.5rem; border: 1px solid var(--border-card); flex: 1; background: var(--bg-card); color: var(--text-main); font-weight: 600;">
-                                    <!-- Options populated dynamically with all students in alphabetical order -->
+                        <div class="attendance-calendar-bar" style="margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 0.6rem; align-items: center;">
+                                <label for="reviews-standard-select" style="font-weight: 700;"><i class="fas fa-layer-group"></i> 1. Standard:</label>
+                                <select id="reviews-standard-select" onchange="onReviewsStandardChange()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 0.6rem; align-items: center; flex: 1; min-width: 250px;">
+                                <label for="reviews-student-select" style="font-weight: 700;"><i class="fas fa-user-graduate"></i> 2. Select Student:</label>
+                                <select id="reviews-student-select" onchange="loadStudentReviewsInStaff()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-card); flex: 1; border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main); font-weight: 600;">
+                                    <!-- Students in selected standard -->
                                 </select>
                             </div>
                         </div>
@@ -762,7 +809,7 @@
                             <!-- Existing Reviews List -->
                             <div class="glass" style="padding: 1.8rem;">
                                 <h4 style="font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
-                                    <i class="fas fa-comments"></i> Existing Reviews for <span id="reviews-student-name-display" style="text-decoration: underline;">Student</span>
+                                    <i class="fas fa-comments"></i> Existing Test Reviews for <span id="reviews-student-name-display" style="text-decoration: underline;">Student</span>
                                 </h4>
                                 <div id="reviews-summary-block" style="display: none; align-items: center; gap: 1rem; margin-bottom: 1rem;">
                                     <span style="font-weight: 800; font-size: 1.5rem;" id="reviews-average-rating-num">0.0</span>
@@ -774,14 +821,33 @@
                                 </div>
                             </div>
 
-                            <!-- Add New Review Form -->
+                            <!-- Add / Edit Review Form -->
                             <div class="glass" style="padding: 1.8rem;">
-                                <h4 style="font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--success);">
-                                    <i class="fas fa-pen-to-square"></i> Submit a New Review
+                                <h4 style="font-weight: 800; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--success);" id="review-form-title">
+                                    <i class="fas fa-pen-to-square"></i> <span id="review-form-title-text">Provide Test Review</span>
                                 </h4>
-                                <form onsubmit="handleReviewFormSubmit(event)">
+                                <form onsubmit="handleReviewFormSubmit(event)" id="review-crud-form">
+                                    <input type="hidden" id="review-edit-id" value="">
                                     <div class="form-group">
-                                        <label for="review-input-reviewer">Reviewer Name</label>
+                                        <label for="review-input-testname">Test / Exam Name *</label>
+                                        <input type="text" id="review-input-testname" placeholder="e.g. Mid-Term Examination / Unit Test 1" required style="padding-left: 1rem;">
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                                        <div class="form-group">
+                                            <label for="review-input-marks">Marks</label>
+                                            <input type="number" id="review-input-marks" min="0" value="0" oninput="updateReviewPercentagePreview()" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="review-input-maxmarks">Max Marks</label>
+                                            <input type="number" id="review-input-maxmarks" min="1" value="100" oninput="updateReviewPercentagePreview()" style="padding-left: 1rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Percentage</label>
+                                            <div id="review-percentage-preview" style="padding: 0.55rem; font-weight: 800; color: var(--primary); font-size: 1.1rem;">0%</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="review-input-reviewer">Reviewer / Faculty Name</label>
                                         <input type="text" id="review-input-reviewer" value="Administrator" required style="padding-left: 1rem;">
                                     </div>
                                     <div class="form-group">
@@ -802,15 +868,20 @@
                                             <i class="fa-solid fa-star" data-value="4" onclick="setReviewRating(4)"></i>
                                             <i class="fa-solid fa-star" data-value="5" onclick="setReviewRating(5)"></i>
                                         </div>
-                                        <input type="hidden" id="review-input-rating" value="0">
+                                        <input type="hidden" id="review-input-rating" value="5">
                                     </div>
                                     <div class="form-group">
-                                        <label for="review-input-comment">Detailed Feedback / Review Notes</label>
-                                        <textarea id="review-input-comment" rows="4" placeholder="Describe the student's accomplishments, behavior, or areas of improvement..." required style="padding-left: 1rem; width: 100%; border: 1px solid var(--border-input); border-radius: var(--radius-sm);"></textarea>
+                                        <label for="review-input-comment">Review / Teacher Comment *</label>
+                                        <textarea id="review-input-comment" rows="4" placeholder="Enter individual review notes and teacher comments for this test..." required style="padding-left: 1rem; width: 100%; border: 1px solid var(--border-input); border-radius: var(--radius-sm);"></textarea>
                                     </div>
-                                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center;">
-                                        <i class="fas fa-paper-plane"></i> Publish Review
-                                    </button>
+                                    <div style="display: flex; gap: 0.8rem; align-items: center;">
+                                        <button type="submit" class="btn btn-success" id="review-submit-btn" style="flex: 1; justify-content: center;">
+                                            <i class="fas fa-floppy-disk"></i> Save Review
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="review-cancel-edit-btn" onclick="cancelReviewEdit()" style="display: none;">
+                                            <i class="fas fa-times"></i> Cancel Edit
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -987,12 +1058,9 @@
                             <table id="student-timetable-grid">
                                 <thead>
                                     <tr>
-                                        <th>Timing Period</th>
-                                        <th>Monday</th>
-                                        <th>Tuesday</th>
-                                        <th>Wednesday</th>
-                                        <th>Thursday</th>
-                                        <th>Friday</th>
+                                        <th>Period</th>
+                                        <th>Hour / Timing Window</th>
+                                        <th>Subject</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1048,11 +1116,11 @@
                         <div class="glass" style="padding: 2.5rem; border-radius: var(--radius-lg); margin-bottom: 2rem;">
                             <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 2.5rem; flex-wrap: wrap;">
                                 <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; font-weight: 800; box-shadow: var(--shadow);">
-                                    <span id="stud-profile-avatar-letters">S</span>
+                                    <span id="stud-profile-avatar-letters">--</span>
                                 </div>
                                 <div>
-                                    <h4 id="stud-profile-full-name" style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.3rem;">Student Name</h4>
-                                    <p id="stud-profile-subtitle" style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">Roll Number: 1001 • Class: 10th</p>
+                                    <h4 id="stud-profile-full-name" style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.3rem;">--</h4>
+                                    <p id="stud-profile-subtitle" style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">Roll Number: -- • Class: --</p>
                                 </div>
                             </div>
                             
@@ -1062,7 +1130,7 @@
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student ID</label>
-                                    <span id="stud-profile-studentid" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">STU-1001</span>
+                                    <span id="stud-profile-studentid" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Date of Birth</label>
@@ -1074,19 +1142,19 @@
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Standard Level</label>
-                                    <span id="stud-profile-standard" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">10th Standard</span>
+                                    <span id="stud-profile-standard" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Assigned Section</label>
-                                    <span id="stud-profile-section" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">A</span>
+                                    <span id="stud-profile-section" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Academic Stream/Group</label>
-                                    <span id="stud-profile-group" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">Science</span>
+                                    <span id="stud-profile-group" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student Email</label>
-                                    <span id="stud-profile-email" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">student@schoolhub.edu</span>
+                                    <span id="stud-profile-email" style="font-size: 1rem; font-weight: 700; color: var(--text-main);">--</span>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Student Contact</label>
@@ -1098,7 +1166,7 @@
                                 </div>
                                 <div>
                                     <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Fees Status</label>
-                                    <span id="stud-profile-fees" class="badge badge-success" style="font-size: 0.95rem; font-weight: 700;">Paid</span>
+                                    <span id="stud-profile-fees" class="badge" style="font-size: 0.95rem; font-weight: 700;">--</span>
                                 </div>
                             </div>
 
@@ -1197,14 +1265,14 @@
                                 <label for="modal-input-name">Full Name *</label>
                                 <div class="input-wrapper" style="position: relative;">
                                     <i class="fas fa-user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);"></i>
-                                    <input type="text" id="modal-input-name" required placeholder="e.g. Sarah Miller" style="padding-left: 2.6rem;">
+                                    <input type="text" id="modal-input-name" required placeholder="Enter student full name" style="padding-left: 2.6rem;">
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="modal-input-roll">Roll Number *</label>
                                 <div class="input-wrapper" style="position: relative;">
                                     <i class="fas fa-id-badge" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);"></i>
-                                    <input type="text" id="modal-input-roll" required placeholder="e.g. 1005" style="padding-left: 2.6rem;">
+                                    <input type="text" id="modal-input-roll" required placeholder="Enter unique roll number" style="padding-left: 2.6rem;">
                                 </div>
                             </div>
                         </div>
@@ -1244,12 +1312,13 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="modal-input-group">Academic Stream</label>
+                                <label for="modal-input-group">Academic Stream *</label>
                                 <select id="modal-input-group" required style="padding-left: 1rem;">
-                                    <option value="General">General (Pre-KG to 10th)</option>
-                                    <option value="Science">Science (11th & 12th)</option>
-                                    <option value="Commerce">Commerce (11th & 12th)</option>
-                                    <option value="Arts">Arts (11th & 12th)</option>
+                                    <option value="General">General</option>
+                                    <option value="Science Group">Science Group</option>
+                                    <option value="Computer Group">Computer Group</option>
+                                    <option value="Arts Group">Arts Group</option>
+                                    <option value="Commerce Group">Commerce Group</option>
                                 </select>
                             </div>
                         </div>
@@ -1269,22 +1338,20 @@
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
-                                <label for="modal-input-fees">Fees Status</label>
-                                <select id="modal-input-fees" required style="padding-left: 1rem;">
+                                <label for="modal-input-advance-fee">Advance Fee Status</label>
+                                <select id="modal-input-advance-fee" required style="padding-left: 1rem;">
                                     <option value="Paid">Paid</option>
-                                    <option value="Partially Paid">Partially Paid</option>
-                                    <option value="Pending">Pending</option>
+                                    <option value="Not Paid" selected>Not Paid</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="modal-input-fees-amount">Total Fee Amount (₹)</label>
-                                <input type="number" id="modal-input-fees-amount" value="25000" style="padding-left: 1rem;">
-                            </div>
-                            <div class="form-group">
-                                <label for="modal-input-fees-paid">Fee Paid (₹)</label>
-                                <input type="number" id="modal-input-fees-paid" value="25000" style="padding-left: 1rem;">
+                                <label for="modal-input-current-month-fee">Current Month Fee Status</label>
+                                <select id="modal-input-current-month-fee" required style="padding-left: 1rem;">
+                                    <option value="Paid">Paid</option>
+                                    <option value="Not Paid" selected>Not Paid</option>
+                                </select>
                             </div>
                         </div>
 
